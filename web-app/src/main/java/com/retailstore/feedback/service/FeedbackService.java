@@ -3,6 +3,10 @@ package com.retailstore.feedback.service;
 import com.retailstore.feedback.model.FeedbackEntry;
 import com.retailstore.feedback.model.EnhancedFeedback;
 import com.retailstore.feedback.model.FeedbackSummary;
+import com.retailstore.feedback.model.AiReview;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +27,14 @@ import java.util.stream.Collectors;
 @Service
 public class FeedbackService {
 
+    private static final Logger log = LoggerFactory.getLogger(FeedbackService.class);
+
     @Autowired
-    private GeminiService geminiService;
+    private GeminiFeedbackAnalyzer geminiAnalyzer;
+
+    // Number of reviews sent to Gemini in one request
+    @Value("${feedback.ai.batch-size:25}")
+    private int batchSize;
 
     // Sentiment analysis output produced by the sentiment-core module
     @Value("${feedback.input-file:data/sentiment_feedback_output.txt}")
@@ -40,6 +50,8 @@ public class FeedbackService {
 
     // Cache for feedback data
     private List<EnhancedFeedback> enhancedFeedbackCache = null;
+    private long lastProcessingMillis;
+    private int lastAiCalls;
 
     /**
      * Reads feedback data from the sentiment analysis output file.
@@ -136,14 +148,15 @@ public class FeedbackService {
         Matcher sentimentMatcher = SENTIMENT_PATTERN.matcher(text);
         if (sentimentMatcher.find()) {
             // CoreNLP writes "Positive" / "Very negative"; the dashboard styles expect POSITIVE / VERY_NEGATIVE
-            entry.setSentiment(sentimentMatcher.group(1).trim().toUpperCase().replace(' ', '_'));
+            entry.setSentiment(normalizeSentiment(sentimentMatcher.group(1)));
         }
 
         return entry;
     }
 
     /**
-     * Enhances feedback with AI-generated categories and actionable insights.
+     * Enhances feedback with Gemini's sentiment, category and actionable insight.
+     * Reviews are sent in batches so 50 reviews need only a few API calls.
      *
      * @return List of EnhancedFeedback objects
      * @throws IOException If an I/O error occurs
@@ -156,12 +169,33 @@ public class FeedbackService {
 
         List<FeedbackEntry> entries = readFeedbackData();
         List<EnhancedFeedback> enhancedEntries = new ArrayList<>();
+        long start = System.currentTimeMillis();
+        int calls = 0;
 
-        for (FeedbackEntry entry : entries) {
-            System.out.println("Enhancing feedback #" + entry.getId() + " of " + entries.size() + " with Gemini...");
-            EnhancedFeedback enhancedEntry = enhanceFeedback(entry);
-            enhancedEntries.add(enhancedEntry);
+        for (int from = 0; from < entries.size(); from += batchSize) {
+            List<FeedbackEntry> batch = entries.subList(from, Math.min(from + batchSize, entries.size()));
+            log.info("Analyzing reviews {}-{} of {} with Gemini", from + 1, from + batch.size(), entries.size());
+
+            Map<Integer, AiReview> resultsById = new HashMap<>();
+            String failure = null;
+            try {
+                calls++;
+                for (AiReview review : geminiAnalyzer.analyze(batch)) {
+                    resultsById.put(review.id(), review);
+                }
+            } catch (Exception e) {
+                log.warn("Gemini batch {}-{} failed: {}", from + 1, from + batch.size(), e.getMessage());
+                failure = e.getMessage();
+            }
+
+            for (FeedbackEntry entry : batch) {
+                enhancedEntries.add(enhance(entry, resultsById.get(entry.getId()), failure));
+            }
         }
+
+        lastProcessingMillis = System.currentTimeMillis() - start;
+        lastAiCalls = calls;
+        log.info("Enhanced {} reviews with {} Gemini call(s) in {} ms", enhancedEntries.size(), calls, lastProcessingMillis);
 
         // Cache the enhanced feedback
         enhancedFeedbackCache = enhancedEntries;
@@ -169,67 +203,30 @@ public class FeedbackService {
         return enhancedEntries;
     }
 
-    /**
-     * Enhances a single feedback entry with AI-generated category and actionable insight.
-     *
-     * @param entry FeedbackEntry to enhance
-     * @return EnhancedFeedback with AI-generated category and actionable insight
-     */
-    private EnhancedFeedback enhanceFeedback(FeedbackEntry entry) {
-        EnhancedFeedback enhancedEntry = new EnhancedFeedback(entry);
-
-        // Create a prompt for Gemini
-        String prompt = String.format("""
-            You are an AI assistant specialized in customer feedback analysis.
-            Analyze the following customer feedback and:
-            1. Categorize the feedback into one of these categories: Product Quality, Customer Service, Store Experience, Website/App, Delivery, Price/Value, Inventory/Stock, or Other.
-            2. Provide a specific actionable insight or recommendation based on the feedback.
-
-            Format your response as JSON with two fields: "category" and "actionableInsight".
-            Keep your response concise but insightful.
-
-            Customer Feedback:
-            Comment: %s
-            Department: %s
-            Sentiment: %s
-
-            Provide the category and actionable insight as JSON:
-            """, entry.getComment(), entry.getDepartment(), entry.getSentiment());
-
-        try {
-            // Call Gemini API and parse the response
-            String response = geminiService.generateContent(prompt);
-
-            // Parse JSON response
-            // This is a simple parsing approach - for production, use a proper JSON parser
-            String jsonResponse = response.trim();
-
-            // Extract category
-            Pattern categoryPattern = Pattern.compile("\"category\"\\s*:\\s*\"([^\"]+)\"");
-            Matcher categoryMatcher = categoryPattern.matcher(jsonResponse);
-            if (categoryMatcher.find()) {
-                enhancedEntry.setCategory(categoryMatcher.group(1));
-            } else {
-                enhancedEntry.setCategory("Uncategorized");
-            }
-
-            // Extract actionable insight
-            Pattern insightPattern = Pattern.compile("\"actionableInsight\"\\s*:\\s*\"([^\"]+)\"");
-            Matcher insightMatcher = insightPattern.matcher(jsonResponse);
-            if (insightMatcher.find()) {
-                enhancedEntry.setActionableInsight(insightMatcher.group(1));
-            } else {
-                enhancedEntry.setActionableInsight("No specific action recommended.");
-            }
-
-        } catch (Exception e) {
-            // Handle API errors gracefully
-            enhancedEntry.setCategory("Error in processing");
-            enhancedEntry.setActionableInsight("Could not generate insight due to API error: " + e.getMessage());
+    private EnhancedFeedback enhance(FeedbackEntry entry, AiReview review, String failure) {
+        EnhancedFeedback enhanced = new EnhancedFeedback(entry);
+        if (review == null) {
+            enhanced.setCategory("Uncategorized");
+            enhanced.setActionableInsight(failure == null
+                    ? "Gemini returned no result for this review."
+                    : "Could not generate insight due to API error: " + failure);
+            return enhanced;
         }
-
-        return enhancedEntry;
+        enhanced.setAiSentiment(normalizeSentiment(review.sentiment()));
+        // The model occasionally invents a category; keep the dashboard to the fixed list
+        enhanced.setCategory(GeminiFeedbackAnalyzer.CATEGORIES.contains(review.category()) ? review.category() : "Other");
+        enhanced.setActionableInsight(review.actionableInsight());
+        return enhanced;
     }
+
+    /** "Very positive" / "positive" -> "VERY_POSITIVE" / "POSITIVE". */
+    static String normalizeSentiment(String sentiment) {
+        return sentiment == null ? null : sentiment.trim().toUpperCase().replace(' ', '_');
+    }
+
+    public long getLastProcessingMillis() { return lastProcessingMillis; }
+
+    public int getLastAiCalls() { return lastAiCalls; }
 
     /**
      * Generates a summary of the feedback data for the dashboard.

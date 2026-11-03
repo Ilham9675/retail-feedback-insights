@@ -39,6 +39,10 @@
 <nav class="navbar navbar-dark bg-primary mb-4">
     <div class="container">
         <span class="navbar-brand mb-0 h1">Retail Store Customer Feedback Dashboard</span>
+        <div>
+            <a class="btn btn-sm btn-light" href="/">Dashboard</a>
+            <a class="btn btn-sm btn-outline-light" href="/evaluation">Model Evaluation</a>
+        </div>
     </div>
 </nav>
 
@@ -262,7 +266,8 @@
                                 <th>Customer</th>
                                 <th>Department</th>
                                 <th>Date</th>
-                                <th>Sentiment</th>
+                                <th>CoreNLP</th>
+                                <th>Gemini</th>
                                 <th>Category</th>
                                 <th>Comment</th>
                                 <th>Insight</th>
@@ -289,6 +294,7 @@
                             <td>${feedback.department}</td>
                             <td>${feedback.date}</td>
                             <td><span class="badge rounded-pill ${sentimentClass}">${feedback.sentiment}</span></td>
+                            <td><span class="badge rounded-pill sentiment-${feedback.aiSentiment || 'NEUTRAL'}">${feedback.aiSentiment || '-'}</span></td>
                             <td>${feedback.category}</td>
                             <td>${feedback.comment}</td>
                             <td><div class="insight-card">${feedback.actionableInsight}</div></td>

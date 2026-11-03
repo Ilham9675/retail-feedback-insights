@@ -6,6 +6,8 @@ package com.retailstore.feedback.model;
 public class EnhancedFeedback extends FeedbackEntry {
     private String category;
     private String actionableInsight;
+    // Sentiment from Gemini; the inherited "sentiment" field is the Stanford CoreNLP result
+    private String aiSentiment;
 
     // Default constructor
     public EnhancedFeedback() {
@@ -26,4 +28,7 @@ public class EnhancedFeedback extends FeedbackEntry {
     public void setActionableInsight(String actionableInsight) {
         this.actionableInsight = actionableInsight;
     }
+
+    public String getAiSentiment() { return aiSentiment; }
+    public void setAiSentiment(String aiSentiment) { this.aiSentiment = aiSentiment; }
 }
