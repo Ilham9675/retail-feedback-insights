@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Feedback Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .sentiment-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .sentiment-VERY_POSITIVE, .sentiment-POSITIVE {
+            background-color: #28a745;
+            color: white;
+        }
+        .sentiment-NEUTRAL {
+            background-color: #6c757d;
+            color: white;
+        }
+        .sentiment-NEGATIVE, .sentiment-VERY_NEGATIVE {
+            background-color: #dc3545;
+            color: white;
+        }
+        .insight-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">Retail Store Customer Feedback Dashboard</span>
+    </div>
+</nav>
+
+<div class="container">
+    <!-- Summary Section -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Feedback Summary</h5>
+                    <p class="card-text">Total Feedback: <span th:text="${summary.totalFeedback}">0</span></p>
+                    <div class="mt-3">
+                        <h6>Sentiment Distribution</h6>
+                        <div class="chart-container">
+                            <canvas id="sentimentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Category Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Department Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="departmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Feedback Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Recent Feedback</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Department</th>
+                                <th>Date</th>
+                                <th>Comment</th>
+                                <th>Sentiment</th>
+                                <th>Category</th>
+                                <th>Insight</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="feedback : ${summary.recentFeedback}">
+                                <td th:text="${feedback.id}">1</td>
+                                <td th:text="${feedback.customer}">John Doe</td>
+                                <td th:text="${feedback.department}">Electronics</td>
+                                <td th:text="${feedback.date}">2023-02-15</td>
+                                <td th:text="${feedback.comment}">Great service!</td>
+                                <td>
+                                            <span class="badge rounded-pill"
+                                                  th:text="${feedback.sentiment}"
+                                                  th:classappend="${'sentiment-' + feedback.sentiment}">
+                                                POSITIVE
+                                            </span>
+                                </td>
+                                <td th:text="${feedback.category}">Customer Service</td>
+                                <td>
+                                    <div class="insight-card" th:text="${feedback.actionableInsight}">
+                                        Recognize staff for excellent service.
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Feedback Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">All Feedback</h5>
+                    <button id="refreshBtn" class="btn btn-sm btn-outline-primary">Refresh Data</button>
+                </div>
+                <div class="card-body">
+                    <div id="allFeedbackContainer" class="table-responsive">
+                        <p class="text-center">Loading all feedback...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    // Get summary data from Thymeleaf
+    const summaryData = /*[[${summary}]]*/ {};
+
+    // Prepare chart data
+    const prepareChartData = (dataObject) => {
+        const labels = Object.keys(dataObject);
+        const values = Object.values(dataObject);
+        const backgroundColors = labels.map(() =>
+            `rgba(${Math.floor(Math.random() * 155) + 100}, ${Math.floor(Math.random() * 155) + 100}, ${Math.floor(Math.random() * 155) + 100}, 0.6)`
+        );
+
+        return {
+            labels,
+            datasets: [{
+                data: values,
+                backgroundColor: backgroundColors,
+                borderWidth: 1
+            }]
+        };
+    };
+
+    // Create sentiment chart
+    const createSentimentChart = () => {
+        const ctx = document.getElementById('sentimentChart').getContext('2d');
+        const data = prepareChartData(summaryData.sentimentCounts);
+
+        new Chart(ctx, {
+            type: 'pie',
+            data: data,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Sentiment Distribution'
+                    }
+                }
+            }
+        });
+    };
+
+    // Create category chart
+    const createCategoryChart = () => {
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        const data = prepareChartData(summaryData.categoryCounts);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Category Distribution'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    };
+
+    // Create department chart
+    const createDepartmentChart = () => {
+        const ctx = document.getElementById('departmentChart').getContext('2d');
+        const data = prepareChartData(summaryData.departmentCounts);
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: data,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Department Distribution'
+                    }
+                }
+            }
+        });
+    };
+
+    // Fetch all feedback and update the table
+    const fetchAllFeedback = () => {
+        fetch('/getfeedback')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('allFeedbackContainer');
+
+                // Create table
+                let tableHtml = `
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Department</th>
+                                <th>Date</th>
+                                <th>Sentiment</th>
+                                <th>Category</th>
+                                <th>Comment</th>
+                                <th>Insight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // Add rows
+                data.forEach(feedback => {
+                    let sentimentClass = '';
+                    if (feedback.sentiment === 'VERY_POSITIVE' || feedback.sentiment === 'POSITIVE') {
+                        sentimentClass = 'sentiment-POSITIVE';
+                    } else if (feedback.sentiment === 'NEGATIVE' || feedback.sentiment === 'VERY_NEGATIVE') {
+                        sentimentClass = 'sentiment-NEGATIVE';
+                    } else {
+                        sentimentClass = 'sentiment-NEUTRAL';
+                    }
+
+                    tableHtml += `
+                        <tr>
+                            <td>${feedback.id}</td>
+                            <td>${feedback.customer}</td>
+                            <td>${feedback.department}</td>
+                            <td>${feedback.date}</td>
+                            <td><span class="badge rounded-pill ${sentimentClass}">${feedback.sentiment}</span></td>
+                            <td>${feedback.category}</td>
+                            <td>${feedback.comment}</td>
+                            <td><div class="insight-card">${feedback.actionableInsight}</div></td>
+                        </tr>
+                    `;
+                });
+
+                tableHtml += `
+                        </tbody>
+                    </table>
+                `;
+
+                container.innerHTML = tableHtml;
+            })
+            .catch(error => {
+                console.error('Error fetching feedback:', error);
+                document.getElementById('allFeedbackContainer').innerHTML =
+                    '<div class="alert alert-danger">Error loading feedback data. Please try again later.</div>';
+            });
+    };
+
+    // Initialize charts and data when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        createSentimentChart();
+        createCategoryChart();
+        createDepartmentChart();
+        fetchAllFeedback();
+
+        // Set up refresh button
+        document.getElementById('refreshBtn').addEventListener('click', fetchAllFeedback);
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

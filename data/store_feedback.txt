@@ -1,0 +1,349 @@
+Feedback #1 [POSITIVE]
+Customer: Lisa Martinez, New Customer
+Department: Returns
+Date: 2025-04-24
+Comment: The staff was very helpful and friendly. The restrooms were clean and well-maintained.
+Sentiment: POSITIVE
+
+Feedback #2 [NEGATIVE]
+Customer: Michael Johnson, Loyalty Member
+Department: Customer Service
+Date: 2025-05-10
+Comment: Staff seemed uninterested in helping me. The music playing in the store was too loud.
+Sentiment: NEGATIVE
+
+Feedback #3 [POSITIVE]
+Customer: Emily Williams, Online Shopper
+Department: Returns
+Date: 2025-04-14
+Comment: Product quality exceeded my expectations.
+Sentiment: POSITIVE
+
+Feedback #4 [POSITIVE]
+Customer: James Rodriguez, Returning Customer
+Department: Electronics
+Date: 2025-05-02
+Comment: I love the new store design! I had to travel across the store multiple times to find everything.
+Sentiment: POSITIVE
+
+Feedback #5 [NEUTRAL]
+Customer: David Garcia, VIP Member
+Department: Checkout
+Date: 2025-05-03
+Comment: Prices are comparable to other stores.
+Sentiment: NEUTRAL
+
+Feedback #6 [NEGATIVE]
+Customer: Lisa Martinez, New Customer
+Department: Returns
+Date: 2025-05-05
+Comment: I had to wait too long for assistance. The store was very crowded during my visit.
+Sentiment: NEGATIVE
+
+Feedback #7 [NEUTRAL]
+Customer: Lisa Martinez, New Customer
+Department: Customer Service
+Date: 2025-04-13
+Comment: The shopping experience was average. Parking was difficult to find.
+Sentiment: NEUTRAL
+
+Feedback #8 [POSITIVE]
+Customer: David Garcia, VIP Member
+Department: Product Selection
+Date: 2025-04-29
+Comment: Customer service representative solved my problem quickly. The music playing in the store was too loud.
+Sentiment: POSITIVE
+
+Feedback #9 [POSITIVE]
+Customer: James Rodriguez, Returning Customer
+Department: Product Selection
+Date: 2025-04-24
+Comment: Customer service representative solved my problem quickly. The store app helped me locate products easily.
+Sentiment: POSITIVE
+
+Feedback #10 [NEGATIVE]
+Customer: James Rodriguez, Returning Customer
+Department: Online Shopping
+Date: 2025-04-11
+Comment: My delivery arrived damaged.
+Sentiment: NEGATIVE
+
+Feedback #11 [POSITIVE]
+Customer: Patricia Wilson, Weekend Shopper
+Department: Home Goods
+Date: 2025-04-17
+Comment: Store layout made it easy to find what I needed. I will definitely shop here again.
+Sentiment: POSITIVE
+
+Feedback #12 [NEGATIVE]
+Customer: Jane Smith, First-time Shopper
+Department: Clothing
+Date: 2025-04-25
+Comment: Too few cashiers during peak hours. The store was very crowded during my visit.
+Sentiment: NEGATIVE
+
+Feedback #13 [POSITIVE]
+Customer: Robert Brown, Frequent Buyer
+Department: Electronics
+Date: 2025-05-07
+Comment: Customer service representative solved my problem quickly. I appreciated the seasonal decorations.
+Sentiment: POSITIVE
+
+Feedback #14 [NEUTRAL]
+Customer: John Doe, Regular Customer
+Department: Grocery
+Date: 2025-04-19
+Comment: Store layout is functional. The restrooms were clean and well-maintained.
+Sentiment: NEUTRAL
+
+Feedback #15 [POSITIVE]
+Customer: Emily Williams, Online Shopper
+Department: Clothing
+Date: 2025-04-28
+Comment: Great selection of products available.
+Sentiment: POSITIVE
+
+Feedback #16 [NEGATIVE]
+Customer: Sarah Miller, Occasional Shopper
+Department: Electronics
+Date: 2025-05-06
+Comment: Prices were higher than advertised online. I might reconsider shopping here in the future.
+Sentiment: NEGATIVE
+
+Feedback #17 [POSITIVE]
+Customer: David Garcia, VIP Member
+Department: Returns
+Date: 2025-04-22
+Comment: Checkout process was quick and efficient. Self-checkout machines were all working properly.
+Sentiment: POSITIVE
+
+Feedback #18 [POSITIVE]
+Customer: Jane Smith, First-time Shopper
+Department: Grocery
+Date: 2025-04-15
+Comment: Website navigation is intuitive and user-friendly. I appreciated the seasonal decorations.
+Sentiment: POSITIVE
+
+Feedback #19 [NEGATIVE]
+Customer: Michael Johnson, Loyalty Member
+Department: Home Goods
+Date: 2025-04-13
+Comment: Website crashed during checkout. I might reconsider shopping here in the future.
+Sentiment: NEGATIVE
+
+Feedback #20 [NEUTRAL]
+Customer: John Doe, Regular Customer
+Department: Store Environment
+Date: 2025-05-09
+Comment: Product selection is what I expected. Self-checkout machines were all working properly.
+Sentiment: NEUTRAL
+
+Feedback #21 [POSITIVE]
+Customer: Robert Brown, Frequent Buyer
+Department: Online Shopping
+Date: 2025-04-20
+Comment: Prices were reasonable for the quality offered. The store app helped me locate products easily.
+Sentiment: POSITIVE
+
+Feedback #22 [NEGATIVE]
+Customer: John Doe, Regular Customer
+Department: Store Environment
+Date: 2025-04-26
+Comment: Product I wanted was out of stock. I had to travel across the store multiple times to find everything.
+Sentiment: NEGATIVE
+
+Feedback #23 [POSITIVE]
+Customer: David Garcia, VIP Member
+Department: Grocery
+Date: 2025-04-16
+Comment: I had an excellent shopping experience today. I will definitely shop here again.
+Sentiment: POSITIVE
+
+Feedback #24 [NEGATIVE]
+Customer: Patricia Wilson, Weekend Shopper
+Department: Customer Service
+Date: 2025-05-08
+Comment: The store was messy and disorganized.
+Sentiment: NEGATIVE
+
+Feedback #25 [NEUTRAL]
+Customer: Robert Brown, Frequent Buyer
+Department: Returns
+Date: 2025-04-18
+Comment: Online ordering works as expected. Parking was difficult to find.
+Sentiment: NEUTRAL
+
+Feedback #26 [POSITIVE]
+Customer: Sarah Miller, Occasional Shopper
+Department: Checkout
+Date: 2025-04-12
+Comment: I had an excellent shopping experience today. I will definitely shop here again.
+Sentiment: POSITIVE
+
+Feedback #27 [POSITIVE]
+Customer: Michael Johnson, Loyalty Member
+Department: Online Shopping
+Date: 2025-05-04
+Comment: Website navigation is intuitive and user-friendly. I appreciated the seasonal decorations.
+Sentiment: POSITIVE
+
+Feedback #28 [NEUTRAL]
+Customer: John Doe, Regular Customer
+Department: Clothing
+Date: 2025-04-23
+Comment: Product quality meets basic expectations. The music playing in the store was too loud.
+Sentiment: NEUTRAL
+
+Feedback #29 [NEGATIVE]
+Customer: Sarah Miller, Occasional Shopper
+Department: Returns
+Date: 2025-04-30
+Comment: Return policy is too restrictive. I might reconsider shopping here in the future.
+Sentiment: NEGATIVE
+
+Feedback #30 [POSITIVE]
+Customer: Jane Smith, First-time Shopper
+Department: Checkout
+Date: 2025-05-01
+Comment: The staff was very helpful and friendly. I will definitely shop here again.
+Sentiment: POSITIVE
+
+Feedback #31 [NEGATIVE]
+Customer: Patricia Wilson, Weekend Shopper
+Department: Online Shopping
+Date: 2025-04-21
+Comment: Poor quality products for the price. I might reconsider shopping here in the future.
+Sentiment: NEGATIVE
+
+Feedback #32 [POSITIVE]
+Customer: Emily Williams, Online Shopper
+Department: Store Environment
+Date: 2025-05-06
+Comment: Store layout made it easy to find what I needed. The restrooms were clean and well-maintained.
+Sentiment: POSITIVE
+
+Feedback #33 [NEUTRAL]
+Customer: David Garcia, VIP Member
+Department: Product Selection
+Date: 2025-04-15
+Comment: Staff was professional but not exceptional. The store was very crowded during my visit.
+Sentiment: NEUTRAL
+
+Feedback #34 [POSITIVE]
+Customer: Lisa Martinez, New Customer
+Department: Electronics
+Date: 2025-04-27
+Comment: Website navigation is intuitive and user-friendly. I will definitely shop here again.
+Sentiment: POSITIVE
+
+Feedback #35 [NEGATIVE]
+Customer: Emily Williams, Online Shopper
+Department: Grocery
+Date: 2025-04-12
+Comment: Staff seemed uninterested in helping me. The store was very crowded during my visit.
+Sentiment: NEGATIVE
+
+Feedback #36 [POSITIVE]
+Customer: Robert Brown, Frequent Buyer
+Department: Home Goods
+Date: 2025-04-29
+Comment: I had an excellent shopping experience today. The store app helped me locate products easily.
+Sentiment: POSITIVE
+
+Feedback #37 [NEUTRAL]
+Customer: Michael Johnson, Loyalty Member
+Department: Returns
+Date: 2025-05-09
+Comment: Return process was straightforward. Parking was difficult to find.
+Sentiment: NEUTRAL
+
+Feedback #38 [POSITIVE]
+Customer: James Rodriguez, Returning Customer
+Department: Customer Service
+Date: 2025-04-19
+Comment: Great selection of products available. I appreciated the seasonal decorations.
+Sentiment: POSITIVE
+
+Feedback #39 [NEGATIVE]
+Customer: John Doe, Regular Customer
+Department: Clothing
+Date: 2025-05-10
+Comment: I had to wait too long for assistance. I had to travel across the store multiple times to find everything.
+Sentiment: NEGATIVE
+
+Feedback #40 [POSITIVE]
+Customer: Sarah Miller, Occasional Shopper
+Department: Product Selection
+Date: 2025-04-14
+Comment: I love the new store design! I will definitely shop here again.
+Sentiment: POSITIVE
+
+Feedback #41 [NEUTRAL]
+Customer: Patricia Wilson, Weekend Shopper
+Department: Returns
+Date: 2025-05-03
+Comment: Checkout process took a reasonable amount of time. Self-checkout machines were all working properly.
+Sentiment: NEUTRAL
+
+Feedback #42 [NEGATIVE]
+Customer: Lisa Martinez, New Customer
+Department: Checkout
+Date: 2025-04-17
+Comment: Poor quality products for the price. The music playing in the store was too loud.
+Sentiment: NEGATIVE
+
+Feedback #43 [POSITIVE]
+Customer: Robert Brown, Frequent Buyer
+Department: Clothing
+Date: 2025-04-25
+Comment: Product quality exceeded my expectations. The restrooms were clean and well-maintained.
+Sentiment: POSITIVE
+
+Feedback #44 [POSITIVE]
+Customer: Jane Smith, First-time Shopper
+Department: Electronics
+Date: 2025-05-02
+Comment: Great selection of products available. I appreciated the seasonal decorations.
+Sentiment: POSITIVE
+
+Feedback #45 [NEGATIVE]
+Customer: David Garcia, VIP Member
+Department: Store Environment
+Date: 2025-04-23
+Comment: Product I wanted was out of stock. I might reconsider shopping here in the future.
+Sentiment: NEGATIVE
+
+Feedback #46 [NEUTRAL]
+Customer: Emily Williams, Online Shopper
+Department: Checkout
+Date: 2025-04-27
+Comment: Prices are comparable to other stores. The store was very crowded during my visit.
+Sentiment: NEUTRAL
+
+Feedback #47 [POSITIVE]
+Customer: James Rodriguez, Returning Customer
+Department: Grocery
+Date: 2025-05-07
+Comment: Checkout process was quick and efficient. Self-checkout machines were all working properly.
+Sentiment: POSITIVE
+
+Feedback #48 [NEGATIVE]
+Customer: Sarah Miller, Occasional Shopper
+Department: Online Shopping
+Date: 2025-04-16
+Comment: Website crashed during checkout. I might reconsider shopping here in the future.
+Sentiment: NEGATIVE
+
+Feedback #49 [POSITIVE]
+Customer: John Doe, Regular Customer
+Department: Product Selection
+Date: 2025-05-05
+Comment: Prices were reasonable for the quality offered. I will definitely shop here again.
+Sentiment: POSITIVE
+
+Feedback #50 [NEUTRAL]
+Customer: Michael Johnson, Loyalty Member
+Department: Clothing
+Date: 2025-04-22
+Comment: Store layout is functional. Parking was difficult to find.
+Sentiment: NEUTRAL
