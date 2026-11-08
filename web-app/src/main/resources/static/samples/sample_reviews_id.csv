@@ -1,0 +1,31 @@
+id,customer,department,date,comment,label
+1,Dewi Lestari,Checkout,2025-06-10,"Kasirnya ramah banget dan antrean cepat, mantap!",POSITIVE
+2,Agus Salim,Grocery,2025-06-10,Susu yang saya beli ternyata sudah kedaluwarsa. Kecewa sekali.,NEGATIVE
+3,Rina Wulandari,Clothing,2025-06-11,Harganya sama saja dengan toko lain.,NEUTRAL
+4,Bayu Saputra,Online Shopping,2025-06-11,Paket datang telat 4 hari dan kardusnya penyok.,NEGATIVE
+5,Putri Ayu,Electronics,2025-06-12,Pegawainya sabar jelasin perbedaan tiap laptop. Puas banget.,POSITIVE
+6,Hendra Gunawan,Customer Service,2025-06-12,Udah nunggu 30 menit di CS tapi gak ada yang bantu.,NEGATIVE
+7,Sari Indah,Home Goods,2025-06-13,Pilihan alat dapurnya lengkap dan kualitasnya bagus.,POSITIVE
+8,Yoga Pratama,Store Environment,2025-06-13,Tokonya bersih tapi musiknya kekencengan.,NEUTRAL
+9,Lina Marlina,Returns,2025-06-14,Proses retur cepat dan gak dipersulit. Recommended!,POSITIVE
+10,Fajar Nugroho,Website/App,2025-06-14,Aplikasinya sering logout sendiri pas mau bayar.,NEGATIVE
+11,Nur Aini,Grocery,2025-06-15,Sayurnya segar-segar semua.,POSITIVE
+12,Rudi Hartono,Checkout,2025-06-15,Antrean di kasir biasa saja di jam segini.,NEUTRAL
+13,Maya Sari,Online Shopping,2025-06-16,Pengiriman cepat dan barang sesuai foto.,POSITIVE
+14,Andi Wijaya,Electronics,2025-06-16,Harga TV di toko lebih mahal dari yang diiklankan di website.,NEGATIVE
+15,Fitri Handayani,Clothing,2025-06-17,Ukuran bajunya pas dan bahannya adem dipakai.,POSITIVE
+16,Doni Setiawan,Store Environment,2025-06-17,Parkirannya susah dicari pas akhir pekan.,NEUTRAL
+17,Wulan Dari,Customer Service,2025-06-18,Mbak CS-nya cepet tanggap dan solutif. Terima kasih!,POSITIVE
+18,Eko Prasetyo,Home Goods,2025-06-18,Barang yang saya cari stoknya habis terus.,NEGATIVE
+19,Siti Nurhaliza,Website/App,2025-06-19,Aplikasinya standar aja sih.,NEUTRAL
+20,Ilham Ramadhan,Grocery,2025-06-19,"Harga promonya lumayan, cuma pilihan buahnya sedikit.",NEUTRAL
+21,Tika Permata,Returns,2025-06-20,Retur ditolak padahal masih ada struk. Ribet banget prosesnya.,NEGATIVE
+22,Bagus Wicaksono,Checkout,2025-06-20,Self-checkout-nya praktis dan semua mesin berfungsi.,POSITIVE
+23,Ratna Sari,Clothing,2025-06-21,Ruang gantinya cuma dua jadi harus antre lama.,NEGATIVE
+24,Joko Susilo,Electronics,2025-06-21,Garansi dijelaskan dengan jelas oleh pegawai.,POSITIVE
+25,Mega Utami,Online Shopping,2025-06-22,Pesanan sampai sesuai estimasi.,NEUTRAL
+26,Arif Rahman,Store Environment,2025-06-22,Toiletnya bersih dan wangi.,POSITIVE
+27,Yuni Astuti,Home Goods,2025-06-23,Kualitasnya sesuai harga.,NEUTRAL
+28,Rizal Fahmi,Customer Service,2025-06-23,Petugasnya jutek waktu ditanya soal promo.,NEGATIVE
+29,Anisa Rahma,Website/App,2025-06-24,Fitur cari produknya membantu banget.,POSITIVE
+30,Dimas Anggara,Grocery,2025-06-24,Belanja di sini biasa aja.,NEUTRAL

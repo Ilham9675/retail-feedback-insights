@@ -8,6 +8,8 @@ public class EnhancedFeedback extends FeedbackEntry {
     private String actionableInsight;
     // Sentiment from Gemini; the inherited "sentiment" field is the Stanford CoreNLP result
     private String aiSentiment;
+    // Review language detected by Gemini, e.g. "en" or "id"
+    private String language;
 
     // Default constructor
     public EnhancedFeedback() {
@@ -31,4 +33,7 @@ public class EnhancedFeedback extends FeedbackEntry {
 
     public String getAiSentiment() { return aiSentiment; }
     public void setAiSentiment(String aiSentiment) { this.aiSentiment = aiSentiment; }
+
+    public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
 }

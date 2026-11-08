@@ -7,7 +7,9 @@ import java.util.Optional;
 
 public interface UploadBatchRepository extends JpaRepository<UploadBatch, Long> {
 
-    List<UploadBatch> findAllByOrderByCreatedAtDesc();
+    List<UploadBatch> findAllByOrderByCreatedAtDescIdDesc();
 
-    Optional<UploadBatch> findFirstByOrderByCreatedAtDesc();
+    Optional<UploadBatch> findFirstByOrderByCreatedAtDescIdDesc();
+
+    boolean existsByName(String name);
 }

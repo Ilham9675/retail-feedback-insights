@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -19,8 +20,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * On first start, imports the bundled 50-review sample: CoreNLP results from the sentiment-core output,
- * plus the ground-truth labels from the raw dataset.
+ * Imports the bundled samples once (skipped when a batch with the same name already exists):
+ * <ul>
+ *   <li>the 30-review Indonesian sample with labels, to show non-English support</li>
+ *   <li>the 50-review English sample: CoreNLP results from the sentiment-core output plus the labels of the raw dataset</li>
+ * </ul>
+ * The English sample is imported last so it is the default batch on a fresh database.
  */
 @Component
 public class SampleDataLoader implements ApplicationRunner {
@@ -48,11 +53,32 @@ public class SampleDataLoader implements ApplicationRunner {
         this.labelsFile = labelsFile;
     }
 
+    static final String INDONESIAN_SAMPLE = "static/samples/sample_reviews_id.csv";
+
     @Override
     public void run(ApplicationArguments args) throws IOException {
-        if (!enabled || batchRepository.count() > 0) {
+        if (!enabled) {
             return;
         }
+        importIndonesianSample();
+        importEnglishSample();
+    }
+
+    private void importIndonesianSample() throws IOException {
+        ClassPathResource resource = new ClassPathResource(INDONESIAN_SAMPLE);
+        if (!resource.exists()) {
+            return;
+        }
+        List<ParsedReview> reviews = parser.parse(resource.getFilename(),
+                resource.getContentAsString(StandardCharsets.UTF_8));
+        String name = "Indonesian sample (" + reviews.size() + " reviews)";
+        if (!batchRepository.existsByName(name)) {
+            importService.importReviews(name, reviews);
+            log.info("Imported Indonesian sample with {} reviews", reviews.size());
+        }
+    }
+
+    private void importEnglishSample() throws IOException {
         Path output = Path.of(coreNlpOutputFile);
         if (!Files.exists(output)) {
             log.warn("Sample data not loaded: {} not found", output.toAbsolutePath());
@@ -76,7 +102,10 @@ public class SampleDataLoader implements ApplicationRunner {
                     .toList();
         }
 
-        importService.importReviews("Sample dataset (" + reviews.size() + " reviews)", reviews);
-        log.info("Imported sample dataset with {} reviews", reviews.size());
+        String name = "Sample dataset (" + reviews.size() + " reviews)";
+        if (!batchRepository.existsByName(name)) {
+            importService.importReviews(name, reviews);
+            log.info("Imported sample dataset with {} reviews", reviews.size());
+        }
     }
 }

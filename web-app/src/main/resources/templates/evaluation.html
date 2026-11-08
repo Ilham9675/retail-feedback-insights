@@ -15,7 +15,7 @@
 <body>
 <nav th:replace="~{fragments/nav :: navbar('evaluation')}"></nav>
 
-<div class="container">
+<div class="container" th:with="hasCoreNlp=${#lists.size(report.models) > 1}">
     <h4 class="mb-1">Sentiment accuracy against dataset labels: <span th:text="${report.batchName}">Sample</span></h4>
     <div th:if="${report.totalLabelled == 0}" class="alert alert-info mt-3">
         This batch has no sentiment labels, so accuracy can't be measured.
@@ -26,7 +26,8 @@
         <span th:text="${report.totalLabelled}">50</span> labelled reviews.
         Gemini analysed them with <span th:text="${report.aiCalls}">2</span> request(s) in
         <span th:text="${#numbers.formatDecimal(report.processingMillis / 1000.0, 1, 1)}">10.0</span> s.
-        CoreNLP's five classes are collapsed to POSITIVE / NEUTRAL / NEGATIVE.
+        <span th:if="${hasCoreNlp}">CoreNLP's five classes are collapsed to POSITIVE / NEUTRAL / NEGATIVE.</span>
+        <span th:unless="${hasCoreNlp}">Stanford CoreNLP only supports English, so only Gemini is scored for this batch.</span>
     </p>
 
     <div class="row" th:if="${report.totalLabelled > 0}">
@@ -66,14 +67,14 @@
         <div class="card-body table-responsive">
             <table class="table table-hover table-sm">
                 <thead>
-                <tr><th>ID</th><th>Comment</th><th>Label</th><th>CoreNLP</th><th>Gemini</th></tr>
+                <tr><th>ID</th><th>Comment</th><th>Label</th><th th:if="${hasCoreNlp}">CoreNLP</th><th>Gemini</th></tr>
                 </thead>
                 <tbody>
                 <tr th:each="d : ${report.disagreements}">
                     <td th:text="${d.id}">1</td>
                     <td th:text="${d.comment}">Comment</td>
                     <td th:text="${d.expected}">NEGATIVE</td>
-                    <td th:text="${d.coreNlp}" th:classappend="${d.coreNlp != d.expected} ? 'wrong'">NEUTRAL</td>
+                    <td th:if="${hasCoreNlp}" th:text="${d.coreNlp}" th:classappend="${d.coreNlp != d.expected} ? 'wrong'">NEUTRAL</td>
                     <td th:text="${d.gemini}" th:classappend="${d.gemini != d.expected} ? 'wrong'">NEGATIVE</td>
                 </tr>
                 </tbody>

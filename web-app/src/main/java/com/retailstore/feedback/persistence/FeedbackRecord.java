@@ -41,6 +41,7 @@ public class FeedbackRecord {
     private String coreNlpSentiment;
 
     // Filled in by Gemini
+    private String language;
     private String aiSentiment;
     private String category;
     @Column(length = 1000)
@@ -61,7 +62,8 @@ public class FeedbackRecord {
         this.coreNlpSentiment = coreNlpSentiment;
     }
 
-    public void applyAnalysis(String aiSentiment, String category, String actionableInsight) {
+    public void applyAnalysis(String language, String aiSentiment, String category, String actionableInsight) {
+        this.language = language;
         this.aiSentiment = aiSentiment;
         this.category = category;
         this.actionableInsight = actionableInsight;
@@ -84,6 +86,8 @@ public class FeedbackRecord {
     public String getLabel() { return label; }
 
     public String getCoreNlpSentiment() { return coreNlpSentiment; }
+
+    public String getLanguage() { return language; }
 
     public String getAiSentiment() { return aiSentiment; }
 

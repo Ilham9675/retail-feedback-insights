@@ -2,7 +2,7 @@
 
 AI-powered customer feedback analytics for retail stores, built with **Java 17, Spring Boot 3.5, Spring AI, Google Gemini and Stanford CoreNLP**.
 
-Upload customer reviews as CSV or text; each review gets a sentiment label, a problem category and a concrete action item. Results are stored in a database and shown on a dashboard with sentiment, category and department breakdowns, plus an evaluation page that measures how accurate each sentiment model is.
+Upload customer reviews as CSV or text, in **English or Indonesian** (including informal Indonesian); each review gets a sentiment label, a problem category and a concrete action item written in the review's language. Results are stored in a database and shown on a dashboard with sentiment, category and department breakdowns, plus an evaluation page that measures how accurate each sentiment model is.
 
 > Started as the final project of IBM's *Generative AI for Java and Spring Development* course and is being extended as a portfolio project. See [Origin and attribution](#origin-and-attribution).
 
@@ -18,10 +18,17 @@ Upload customer reviews as CSV or text; each review gets a sentiment label, a pr
 | Gemini requests for 50 reviews | 50 | **2** |
 | Time to enrich 50 reviews (free tier) | ~15 minutes | **~10-41 seconds** (varies with Gemini latency) |
 | Reviews you can analyse | The bundled file only | **Any CSV/TXT upload**, stored in a database |
+| Languages | English only (CoreNLP) | **English and Indonesian**: 27 / 30 (90%) on the Indonesian sample |
 
 CoreNLP stays in the pipeline as an offline baseline; the evaluation page shows both models side by side with confusion matrices and every review where a model disagrees with the label.
 
 ![Dashboard for an uploaded CSV batch](docs/dashboard.jpg)
+
+### Indonesian reviews
+
+The app ships a second, labelled sample of 30 Indonesian reviews written the way customers actually write, with slang such as *gak*, *banget*, *mantap*, *kekencengan* and *jutek*. Stanford CoreNLP has no Indonesian sentiment model, so only Gemini is scored; it gets every positive (12/12) and negative (9/9) review right, and the 3 misses are borderline neutral reviews such as *"Kualitasnya sesuai harga"*. Insights come back in Indonesian, for example *"Tingkatkan pengecekan tanggal kedaluwarsa produk secara berkala sebelum dijual."*
+
+![Evaluation of the Indonesian sample: Gemini 90%](docs/evaluation_id.jpg)
 
 ## How it works
 
@@ -29,7 +36,8 @@ CoreNLP stays in the pipeline as an offline baseline; the evaluation page shows 
 flowchart LR
     A[data/store_feedback.txt<br/>labelled raw reviews] --> B[sentiment-core<br/>Stanford CoreNLP]
     B --> C[data/sentiment_feedback_output.txt]
-    C -->|sample, on first start| DB[(H2 database<br/>batches + reviews + AI results)]
+    C -->|English sample, on first start| DB[(H2 database<br/>batches + reviews + AI results)]
+    ID[Indonesian sample CSV] -->|on first start| DB
     A -->|labels| DB
     U[Upload page<br/>CSV / TXT] --> DB
     DB <--> D[web-app<br/>Spring Boot + Spring AI]
@@ -42,7 +50,7 @@ flowchart LR
 | Module | What it does |
 |---|---|
 | `sentiment-core` | Parses the feedback file, runs CoreNLP (`tokenize, ssplit, pos, lemma, parse, sentiment`) on every sentence, keeps the most common sentence sentiment per review, and writes summary statistics, a per-department breakdown and per-review results. |
-| `web-app` | Stores reviews in batches (the bundled sample or an uploaded file) and sends them to Gemini through a Spring AI `ChatClient`, 25 per request. Gemini returns typed JSON (`id`, `sentiment`, `category`, `actionableInsight`) that Spring AI maps straight into Java records. Results are saved, so each batch is analysed only once, and served through a Thymeleaf + Chart.js dashboard, an evaluation page and a JSON API. |
+| `web-app` | Stores reviews in batches (the bundled English and Indonesian samples or an uploaded file) and sends them to Gemini through a Spring AI `ChatClient`, 25 per request. Gemini returns typed JSON (`id`, `language`, `sentiment`, `category`, `actionableInsight`) that Spring AI maps straight into Java records. Results are saved, so each batch is analysed only once, and served through a Thymeleaf + Chart.js dashboard, an evaluation page and a JSON API. |
 
 ## Getting started
 
@@ -60,7 +68,7 @@ export GEMINI_API_KEY=your-key            # PowerShell: $env:GEMINI_API_KEY="you
 java -jar web-app/target/web-app-0.1.0-SNAPSHOT.jar
 ```
 
-Open <http://localhost:8080> for the dashboard, <http://localhost:8080/evaluation> for the model comparison and <http://localhost:8080/upload> to analyse your own reviews ([sample CSV](web-app/src/main/resources/static/samples/sample_reviews.csv)). The first time a batch is opened Gemini analyses it; the results are stored in `data/db/`, so later visits and restarts don't call the API again.
+Open <http://localhost:8080> for the dashboard, <http://localhost:8080/evaluation> for the model comparison and <http://localhost:8080/upload> to analyse your own reviews (sample CSVs: [English](web-app/src/main/resources/static/samples/sample_reviews.csv), [Indonesian](web-app/src/main/resources/static/samples/sample_reviews_id.csv)). The first time a batch is opened Gemini analyses it; the results are stored in `data/db/`, so later visits and restarts don't call the API again.
 
 ### Upload format
 
@@ -124,6 +132,7 @@ Example review from `/getfeedback`:
 
 - **Batching instead of one call per review.** The course version made 50 sequential HTTP calls; with a free-tier key that took ~15 minutes and some calls timed out. Sending 25 reviews per request cut it to 2 calls and ~41 seconds.
 - **Structured output instead of regex.** `ChatClient.call().entity(new ParameterizedTypeReference<List<AiReview>>() {})` adds a JSON schema to the prompt and maps the answer to records, and the request asks Gemini for `application/json`. Categories outside the fixed list are mapped to `Other`, because the model occasionally invents one.
+- **Multilingual by prompt, fixed categories.** The system prompt tells Gemini that reviews may be English or informal Indonesian, to report the language (ISO 639-1), to keep categories in English so charts stay comparable, and to write the insight in the review's language. The evaluation page drops CoreNLP for batches it can't analyse.
 - **Analyse once, store the result.** Batches and Gemini results live in a database (H2 file by default, any JDBC URL via `DATABASE_URL`), so a batch costs API quota only the first time it is opened, also across restarts.
 - **Failures degrade, not crash.** If a request fails (quota, network), its reviews are marked `Uncategorized` with the reason, the dashboard shows how many are missing, and a "Retry with Gemini" button re-sends only those reviews.
 - **Upload validation.** The parser accepts CSV (any column order, optional columns, quoted commas, UTF-8 BOM) and the dataset's text format, and rejects files without comments, bad ids or more than 200 reviews with a message on the page.
@@ -134,11 +143,12 @@ Example review from `/getfeedback`:
 
 ## Tests
 
-`mvn test` runs 18 tests without network access (Gemini is mocked, the database is in-memory):
+`mvn test` runs 21 tests without network access (Gemini is mocked, the database is in-memory):
 
-- `FeedbackFlowIntegrationTest`: the sample is imported on startup; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch; invalid uploads store nothing; unknown batches return 404.
+- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch; invalid uploads store nothing; unknown batches return 404.
 - `FeedbackFileParserTest`: CSV variants, the raw text dataset, the CoreNLP output format and invalid files.
 - `EvaluationServiceTest`: five-to-three class mapping, accuracy and confusion matrix.
+- `GeminiFeedbackAnalyzerTest`: the prompt covers Indonesian reviews, the language field and every category.
 - `FeedbackServiceApplicationTests`: the Spring context starts.
 
 ## Roadmap
@@ -146,7 +156,8 @@ Example review from `/getfeedback`:
 - [x] **Phase 0:** single repository, configurable paths and model, secrets via environment
 - [x] **Phase 1:** Spring AI `ChatClient` with structured JSON output, batched prompts (15 min → 41 s), evaluation page comparing CoreNLP vs Gemini against the labels (46% → 92%)
 - [x] **Phase 2A:** CSV/TXT upload with validation, batches and AI results stored in a database, batch selector, retry for failed reviews
-- [ ] **Phase 2 (rest):** Indonesian-language reviews, async processing with progress, filters and trends, per-department executive summary
+- [x] **Phase 2C:** Indonesian reviews (labelled 30-review sample, language detection, insights in the review's language): Gemini 90%
+- [ ] **Phase 2 (rest):** async processing with progress, filters and trends, per-department executive summary
 - [ ] **Phase 3:** OpenAPI docs, Spring AI evaluators for insight quality, Docker Compose, GitHub Actions, live demo
 - [ ] **Phase 4:** "ask your feedback" chat (RAG), alerts on negative spikes
 

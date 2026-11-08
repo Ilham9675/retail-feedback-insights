@@ -49,12 +49,12 @@ public class FeedbackService {
     }
 
     public List<UploadBatch> listBatches() {
-        return batchRepository.findAllByOrderByCreatedAtDesc();
+        return batchRepository.findAllByOrderByCreatedAtDescIdDesc();
     }
 
     /** The requested batch, or the most recent one when {@code batchId} is null. */
     public UploadBatch getBatch(Long batchId) {
-        return (batchId == null ? batchRepository.findFirstByOrderByCreatedAtDesc() : batchRepository.findById(batchId))
+        return (batchId == null ? batchRepository.findFirstByOrderByCreatedAtDescIdDesc() : batchRepository.findById(batchId))
                 .orElseThrow(() -> new NoSuchElementException(batchId == null
                         ? "No feedback has been imported yet."
                         : "Feedback batch " + batchId + " does not exist."));
@@ -122,14 +122,15 @@ public class FeedbackService {
 
     private static void apply(FeedbackRecord record, AiReview review, String failure) {
         if (review == null) {
-            record.applyAnalysis(null, UNCATEGORIZED, failure == null
+            record.applyAnalysis(null, null, UNCATEGORIZED, failure == null
                     ? "Gemini returned no result for this review."
                     : "Could not generate insight due to API error: " + failure);
             return;
         }
         // The model occasionally invents a category; keep the dashboard to the fixed list
         String category = GeminiFeedbackAnalyzer.CATEGORIES.contains(review.category()) ? review.category() : "Other";
-        record.applyAnalysis(normalizeSentiment(review.sentiment()), category, review.actionableInsight());
+        String language = review.language() == null ? null : review.language().trim().toLowerCase();
+        record.applyAnalysis(language, normalizeSentiment(review.sentiment()), category, review.actionableInsight());
     }
 
     /** "Very positive" / "positive" -> "VERY_POSITIVE" / "POSITIVE". */
@@ -145,6 +146,7 @@ public class FeedbackService {
     static EnhancedFeedback toEnhancedFeedback(FeedbackRecord r) {
         EnhancedFeedback feedback = new EnhancedFeedback(toEntry(r));
         feedback.setAiSentiment(r.getAiSentiment());
+        feedback.setLanguage(r.getLanguage());
         feedback.setCategory(r.getCategory());
         feedback.setActionableInsight(r.getActionableInsight());
         return feedback;

@@ -1,5 +1,6 @@
 package com.retailstore.feedback;
 
+import com.retailstore.feedback.ingest.SampleDataLoader;
 import com.retailstore.feedback.model.AiReview;
 import com.retailstore.feedback.model.EvaluationReport;
 import com.retailstore.feedback.model.FeedbackEntry;
@@ -61,22 +62,53 @@ class FeedbackFlowIntegrationTest {
     @Autowired
     private MockMvc mvc;
 
+    @Autowired
+    private SampleDataLoader sampleDataLoader;
+
     @BeforeEach
     void geminiCallsEverythingNegative() {
         doAnswer(invocation -> {
             List<FeedbackEntry> batch = invocation.getArgument(0);
             return batch.stream()
-                    .map(e -> new AiReview(e.getId(), "negative", "Store Experience", "Fix it"))
+                    .map(e -> new AiReview(e.getId(), "en", "negative", "Store Experience", "Fix it"))
                     .toList();
         }).when(analyzer).analyze(anyList());
     }
 
     @Test
-    void sampleDatasetIsImportedOnStartupWithLabelsAndCoreNlp() {
-        List<UploadBatch> batches = batchRepository.findAll();
-        assertThat(batches).hasSize(1);
-        assertThat(batches.get(0).getReviewCount()).isEqualTo(50);
-        assertThat(batches.get(0).isAnalyzed()).isFalse();
+    void bothSamplesAreImportedOnStartupAndEnglishIsTheDefault() {
+        List<UploadBatch> batches = feedbackService.listBatches();
+        assertThat(batches).extracting(UploadBatch::getName)
+                .containsExactly("Sample dataset (50 reviews)", "Indonesian sample (30 reviews)");
+        assertThat(batches).noneMatch(UploadBatch::isAnalyzed);
+        assertThat(feedbackService.getBatch(null).getReviewCount()).isEqualTo(50);
+    }
+
+    @Test
+    void sampleImportIsIdempotent() throws Exception {
+        sampleDataLoader.run(null);
+
+        assertThat(batchRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void indonesianSampleHasLabelsAndKeepsTheDetectedLanguage() {
+        UploadBatch indonesian = feedbackService.listBatches().get(1);
+        doAnswer(invocation -> {
+            List<FeedbackEntry> batch = invocation.getArgument(0);
+            return batch.stream()
+                    .map(e -> new AiReview(e.getId(), " ID ", "positive", "Customer Service", "Pertahankan pelayanan"))
+                    .toList();
+        }).when(analyzer).analyze(anyList());
+
+        List<FeedbackRecord> records = feedbackService.getAnalyzedRecords(indonesian.getId());
+
+        assertThat(records).hasSize(30).allMatch(r -> r.getLabel() != null && r.getCoreNlpSentiment() == null);
+        assertThat(records).allMatch(r -> "id".equals(r.getLanguage()));
+        // CoreNLP can't analyse Indonesian, so only Gemini is scored; the sample has 12 positive labels
+        EvaluationReport report = evaluationService.evaluate(indonesian.getId());
+        assertThat(report.models()).extracting(EvaluationReport.ModelScore::model).containsExactly("Gemini");
+        assertThat(report.models().get(0).correct()).isEqualTo(12);
     }
 
     @Test
@@ -149,7 +181,7 @@ class FeedbackFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("comment")));
 
-        assertThat(batchRepository.count()).isEqualTo(1);
+        assertThat(batchRepository.count()).isEqualTo(2);
         verify(analyzer, never()).analyze(anyList());
     }
 

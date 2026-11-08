@@ -275,6 +275,7 @@
                                 <th>Customer</th>
                                 <th>Department</th>
                                 <th>Date</th>
+                                <th>Lang</th>
                                 <th>CoreNLP</th>
                                 <th>Gemini</th>
                                 <th>Category</th>
@@ -302,6 +303,7 @@
                             <td>${feedback.customer}</td>
                             <td>${feedback.department}</td>
                             <td>${feedback.date}</td>
+                            <td><span class="badge text-bg-light border">${(feedback.language || '-').toUpperCase()}</span></td>
                             <td><span class="badge rounded-pill ${sentimentClass}">${feedback.sentiment || '-'}</span></td>
                             <td><span class="badge rounded-pill sentiment-${feedback.aiSentiment || 'NEUTRAL'}">${feedback.aiSentiment || '-'}</span></td>
                             <td>${feedback.category}</td>
