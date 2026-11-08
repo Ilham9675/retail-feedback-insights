@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Reviews - Customer Feedback Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        .card { margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        pre { background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar('upload')}"></nav>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Upload customer reviews</h4>
+                    <p class="text-muted">
+                        Upload a <b>.csv</b> or <b>.txt</b> file with up to <span th:text="${maxReviews}">200</span> reviews (max 1 MB).
+                        Gemini analyses the reviews when you open the dashboard, about 25 reviews per request (usually a few seconds each).
+                    </p>
+
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}">Error</div>
+
+                    <form method="post" action="/upload" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <input class="form-control" type="file" name="file" accept=".csv,.txt" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Upload and analyse</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">CSV format</h5>
+                    <p>A header row is required. Only <code>comment</code> is mandatory; <code>label</code>
+                        (POSITIVE / NEUTRAL / NEGATIVE) enables the accuracy evaluation.</p>
+<pre>id,customer,department,date,comment,label
+1,Jane Smith,Checkout,2025-05-01,"Fast checkout, friendly cashier.",POSITIVE
+2,Ahmad,Grocery,2025-05-02,The milk was expired.,NEGATIVE</pre>
+                    <a class="btn btn-sm btn-outline-secondary" href="/samples/sample_reviews.csv" download>Download sample CSV</a>
+
+                    <h5 class="card-title mt-4">TXT format</h5>
+                    <p>Blocks separated by a blank line; the label in brackets is optional.</p>
+<pre>Feedback #1 [POSITIVE]
+Customer: Jane Smith
+Department: Checkout
+Date: 2025-05-01
+Comment: Fast checkout, friendly cashier.</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

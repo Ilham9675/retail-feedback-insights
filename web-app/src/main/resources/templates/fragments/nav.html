@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Shared navbar. "page" is the current view name; currentBatch/batches are optional (absent on the upload page). -->
+<nav th:fragment="navbar(page)" class="navbar navbar-dark bg-primary mb-4">
+    <div class="container flex-wrap gap-2">
+        <span class="navbar-brand mb-0 h1">Retail Store Customer Feedback Dashboard</span>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <form th:if="${batches != null}" method="get" th:action="${page == 'evaluation'} ? '/evaluation' : '/'" class="d-flex">
+                <select name="batch" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Feedback batch">
+                    <option th:each="b : ${batches}" th:value="${b.id}" th:text="${b.name}"
+                            th:selected="${currentBatch != null and b.id == currentBatch.id}">Batch</option>
+                </select>
+            </form>
+            <a class="btn btn-sm" th:classappend="${page == 'dashboard'} ? 'btn-light' : 'btn-outline-light'"
+               th:href="${currentBatch != null} ? @{/(batch=${currentBatch.id})} : @{/}">Dashboard</a>
+            <a class="btn btn-sm" th:classappend="${page == 'evaluation'} ? 'btn-light' : 'btn-outline-light'"
+               th:href="${currentBatch != null} ? @{/evaluation(batch=${currentBatch.id})} : @{/evaluation}">Model Evaluation</a>
+            <a class="btn btn-sm" th:classappend="${page == 'upload'} ? 'btn-light' : 'btn-warning'" href="/upload">Upload reviews</a>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

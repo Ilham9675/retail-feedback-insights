@@ -36,17 +36,25 @@
     </style>
 </head>
 <body>
-<nav class="navbar navbar-dark bg-primary mb-4">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1">Retail Store Customer Feedback Dashboard</span>
-        <div>
-            <a class="btn btn-sm btn-light" href="/">Dashboard</a>
-            <a class="btn btn-sm btn-outline-light" href="/evaluation">Model Evaluation</a>
-        </div>
-    </div>
-</nav>
+<nav th:replace="~{fragments/nav :: navbar('dashboard')}"></nav>
 
 <div class="container">
+    <!-- Batch status -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h4 class="mb-0" th:text="${currentBatch.name}">Sample dataset</h4>
+            <small class="text-muted">
+                Analysed with <span th:text="${currentBatch.aiCalls}">2</span> Gemini request(s)
+                in <span th:text="${#numbers.formatDecimal(currentBatch.processingMillis / 1000.0, 1, 1)}">40.0</span> s
+            </small>
+        </div>
+        <form th:if="${currentBatch.failedReviews > 0}" method="post"
+              th:action="@{/batches/{id}/reanalyze(id=${currentBatch.id})}" class="d-flex align-items-center gap-2">
+            <span class="text-danger small"><span th:text="${currentBatch.failedReviews}">3</span> review(s) have no AI result.</span>
+            <button type="submit" class="btn btn-sm btn-outline-danger">Retry with Gemini</button>
+        </form>
+    </div>
+
     <!-- Summary Section -->
     <div class="row mb-4">
         <div class="col-md-4">
@@ -116,8 +124,8 @@
                                 <td th:text="${feedback.comment}">Great service!</td>
                                 <td>
                                             <span class="badge rounded-pill"
-                                                  th:text="${feedback.sentiment}"
-                                                  th:classappend="${'sentiment-' + feedback.sentiment}">
+                                                  th:text="${feedback.aiSentiment ?: feedback.sentiment}"
+                                                  th:classappend="${'sentiment-' + (feedback.aiSentiment ?: feedback.sentiment)}">
                                                 POSITIVE
                                             </span>
                                 </td>
@@ -157,6 +165,7 @@
 <script th:inline="javascript">
     // Get summary data from Thymeleaf
     const summaryData = /*[[${summary}]]*/ {};
+    const currentBatchId = /*[[${currentBatch.id}]]*/ 1;
 
     // Prepare chart data
     const prepareChartData = (dataObject) => {
@@ -252,7 +261,7 @@
 
     // Fetch all feedback and update the table
     const fetchAllFeedback = () => {
-        fetch('/getfeedback')
+        fetch('/getfeedback?batch=' + currentBatchId)
             .then(response => response.json())
             .then(data => {
                 const container = document.getElementById('allFeedbackContainer');
@@ -293,7 +302,7 @@
                             <td>${feedback.customer}</td>
                             <td>${feedback.department}</td>
                             <td>${feedback.date}</td>
-                            <td><span class="badge rounded-pill ${sentimentClass}">${feedback.sentiment}</span></td>
+                            <td><span class="badge rounded-pill ${sentimentClass}">${feedback.sentiment || '-'}</span></td>
                             <td><span class="badge rounded-pill sentiment-${feedback.aiSentiment || 'NEUTRAL'}">${feedback.aiSentiment || '-'}</span></td>
                             <td>${feedback.category}</td>
                             <td>${feedback.comment}</td>

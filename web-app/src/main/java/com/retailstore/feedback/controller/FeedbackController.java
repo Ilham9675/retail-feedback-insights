@@ -2,90 +2,90 @@ package com.retailstore.feedback.controller;
 
 import com.retailstore.feedback.model.EnhancedFeedback;
 import com.retailstore.feedback.model.EvaluationReport;
-import com.retailstore.feedback.model.FeedbackSummary;
+import com.retailstore.feedback.persistence.UploadBatch;
 import com.retailstore.feedback.service.EvaluationService;
 import com.retailstore.feedback.service.FeedbackService;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-import java.io.IOException;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
- * Controller for feedback-related endpoints.
+ * Dashboard, evaluation and JSON endpoints. Every page works on one batch, selected with {@code ?batch=id}
+ * (default: the most recent batch).
  */
 @Controller
 public class FeedbackController {
 
-    @Autowired
-    private FeedbackService feedbackService;
+    private final FeedbackService feedbackService;
+    private final EvaluationService evaluationService;
 
-    @Autowired
-    private EvaluationService evaluationService;
-
-    /**
-     * Displays the dashboard page.
-     *
-     * @param model Model to add attributes to
-     * @return The name of the view to render
-     */
-    @GetMapping("/")
-    public String dashboard(Model model) {
-        try {
-            FeedbackSummary summary = feedbackService.generateFeedbackSummary();
-            model.addAttribute("summary", summary);
-            return "dashboard";
-        } catch (IOException e) {
-            model.addAttribute("error", "Error loading feedback data: " + e.getMessage());
-            return "error";
-        }
+    public FeedbackController(FeedbackService feedbackService, EvaluationService evaluationService) {
+        this.feedbackService = feedbackService;
+        this.evaluationService = evaluationService;
     }
 
-    /**
-     * Returns all feedback data in JSON format.
-     *
-     * @return List of enhanced feedback entries
-     */
+    @GetMapping("/")
+    public String dashboard(@RequestParam(required = false) Long batch, Model model) {
+        UploadBatch current = feedbackService.getBatch(batch);
+        model.addAttribute("summary", feedbackService.generateFeedbackSummary(current.getId()));
+        addBatchSelector(model, feedbackService.getBatch(current.getId()));
+        return "dashboard";
+    }
+
+    @GetMapping("/evaluation")
+    public String evaluation(@RequestParam(required = false) Long batch, Model model) {
+        UploadBatch current = feedbackService.getBatch(batch);
+        model.addAttribute("report", evaluationService.evaluate(current.getId()));
+        addBatchSelector(model, feedbackService.getBatch(current.getId()));
+        return "evaluation";
+    }
+
+    /** Retries Gemini for reviews of a batch that have no result yet. */
+    @PostMapping("/batches/{id}/reanalyze")
+    public String reanalyze(@PathVariable Long id) {
+        feedbackService.reanalyzeFailed(id);
+        return "redirect:/?batch=" + id;
+    }
+
     @GetMapping("/getfeedback")
     @ResponseBody
-    public ResponseEntity<List<EnhancedFeedback>> getFeedback() {
-        try {
-            List<EnhancedFeedback> feedback = feedbackService.getEnhancedFeedback();
-            return ResponseEntity.ok(feedback);
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().build();
-        }
+    public List<EnhancedFeedback> getFeedback(@RequestParam(required = false) Long batch) {
+        return feedbackService.getEnhancedFeedback(batch);
     }
 
-    /**
-     * Displays sentiment accuracy of Stanford CoreNLP and Gemini against the dataset labels.
-     */
-    @GetMapping("/evaluation")
-    public String evaluation(Model model) {
-        try {
-            model.addAttribute("report", evaluationService.evaluate());
-            return "evaluation";
-        } catch (IOException e) {
-            model.addAttribute("error", "Error loading evaluation data: " + e.getMessage());
-            return "error";
-        }
-    }
-
-    /**
-     * Returns the same evaluation as JSON.
-     */
     @GetMapping("/api/evaluation")
     @ResponseBody
-    public ResponseEntity<EvaluationReport> evaluationJson() {
-        try {
-            return ResponseEntity.ok(evaluationService.evaluate());
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().build();
-        }
+    public EvaluationReport evaluationJson(@RequestParam(required = false) Long batch) {
+        return evaluationService.evaluate(feedbackService.getBatch(batch).getId());
+    }
+
+    @GetMapping("/api/batches")
+    @ResponseBody
+    public List<UploadBatch> batches() {
+        return feedbackService.listBatches();
+    }
+
+    private void addBatchSelector(Model model, UploadBatch current) {
+        model.addAttribute("currentBatch", current);
+        model.addAttribute("batches", feedbackService.listBatches());
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String notFound(NoSuchElementException e, Model model) {
+        model.addAttribute("error", e.getMessage());
+        return "error";
     }
 }

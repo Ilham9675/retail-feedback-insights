@@ -1,86 +1,73 @@
 package com.retailstore.feedback.service;
 
-import com.retailstore.feedback.model.EnhancedFeedback;
 import com.retailstore.feedback.model.EvaluationReport;
 import com.retailstore.feedback.model.EvaluationReport.Disagreement;
 import com.retailstore.feedback.model.EvaluationReport.ModelScore;
+import com.retailstore.feedback.persistence.FeedbackRecord;
+import com.retailstore.feedback.persistence.UploadBatch;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * Measures how well Stanford CoreNLP and Gemini agree with the sentiment labels in the raw dataset.
+ * Measures how well Stanford CoreNLP and Gemini agree with the sentiment labels of a batch.
+ * Only reviews that came with a label are scored.
  */
 @Service
 public class EvaluationService {
 
     static final List<String> LABELS = List.of("POSITIVE", "NEUTRAL", "NEGATIVE");
 
-    // Raw dataset lines look like: "Feedback #12 [NEGATIVE]"
-    private static final Pattern LABEL_PATTERN = Pattern.compile("Feedback #(\\d+)\\s*\\[(\\w+)]");
-
     private final FeedbackService feedbackService;
-    private final String labelsFile;
 
-    public EvaluationService(FeedbackService feedbackService,
-                             @Value("${feedback.labels-file:data/store_feedback.txt}") String labelsFile) {
+    public EvaluationService(FeedbackService feedbackService) {
         this.feedbackService = feedbackService;
-        this.labelsFile = labelsFile;
     }
 
-    public EvaluationReport evaluate() throws IOException {
-        Map<Integer, String> labels = parseLabels(Files.readString(Path.of(labelsFile), StandardCharsets.UTF_8));
-        List<EnhancedFeedback> feedback = feedbackService.getEnhancedFeedback();
+    public EvaluationReport evaluate(Long batchId) {
+        List<FeedbackRecord> records = feedbackService.getAnalyzedRecords(batchId);
+        UploadBatch batch = feedbackService.getBatch(batchId);
 
+        Map<Integer, String> labels = new LinkedHashMap<>();
         Map<Integer, String> coreNlp = new HashMap<>();
         Map<Integer, String> gemini = new HashMap<>();
-        for (EnhancedFeedback f : feedback) {
-            coreNlp.put(f.getId(), toThreeClass(f.getSentiment()));
-            gemini.put(f.getId(), toThreeClass(f.getAiSentiment()));
+        for (FeedbackRecord r : records) {
+            if (r.getLabel() != null) {
+                labels.put(r.getReviewId(), toThreeClass(r.getLabel()));
+            }
+            coreNlp.put(r.getReviewId(), toThreeClass(r.getCoreNlpSentiment()));
+            gemini.put(r.getReviewId(), toThreeClass(r.getAiSentiment()));
         }
 
+        // CoreNLP results only exist for the bundled sample, so it is only scored when present
+        boolean hasCoreNlp = records.stream().anyMatch(r -> r.getCoreNlpSentiment() != null);
+        List<ModelScore> models = new ArrayList<>();
+        if (hasCoreNlp) {
+            models.add(score("Stanford CoreNLP", labels, coreNlp));
+        }
+        models.add(score("Gemini", labels, gemini));
+
         List<Disagreement> disagreements = new ArrayList<>();
-        for (EnhancedFeedback f : feedback) {
-            String expected = labels.get(f.getId());
+        for (FeedbackRecord r : records) {
+            String expected = labels.get(r.getReviewId());
             if (expected == null) {
                 continue;
             }
-            String c = coreNlp.get(f.getId());
-            String g = gemini.get(f.getId());
-            if (!expected.equals(c) || !expected.equals(g)) {
-                disagreements.add(new Disagreement(f.getId(), f.getComment(), expected, c, g));
+            String c = coreNlp.get(r.getReviewId());
+            String g = gemini.get(r.getReviewId());
+            if ((hasCoreNlp && !expected.equals(c)) || !expected.equals(g)) {
+                disagreements.add(new Disagreement(r.getReviewId(), r.getComment(), expected, c, g));
             }
         }
 
-        return new EvaluationReport(
-                labels.size(),
-                List.of(score("Stanford CoreNLP", labels, coreNlp), score("Gemini", labels, gemini)),
-                disagreements,
-                feedbackService.getLastProcessingMillis(),
-                feedbackService.getLastAiCalls());
-    }
-
-    /** Reads "Feedback #id [LABEL]" headers from the raw dataset. */
-    static Map<Integer, String> parseLabels(String rawDataset) {
-        Map<Integer, String> labels = new LinkedHashMap<>();
-        Matcher m = LABEL_PATTERN.matcher(rawDataset);
-        while (m.find()) {
-            labels.put(Integer.parseInt(m.group(1)), toThreeClass(m.group(2)));
-        }
-        return labels;
+        return new EvaluationReport(batch.getName(), labels.size(), models, disagreements,
+                batch.getProcessingMillis(), batch.getAiCalls());
     }
 
     /** Scores predictions against labels; a missing prediction counts as wrong. */

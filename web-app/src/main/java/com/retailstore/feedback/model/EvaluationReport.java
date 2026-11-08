@@ -6,13 +6,15 @@ import java.util.Map;
 /**
  * Compares sentiment predictions from each model against the labels in the dataset.
  *
+ * @param batchName        the evaluated batch
  * @param totalLabelled    reviews that have a label in the dataset
- * @param models           one score per model (Stanford CoreNLP, Gemini)
+ * @param models           one score per model (Stanford CoreNLP when available, Gemini)
  * @param disagreements    reviews where at least one model disagrees with the label
  * @param processingMillis time spent enriching the reviews with Gemini
  * @param aiCalls          number of Gemini requests used
  */
-public record EvaluationReport(int totalLabelled,
+public record EvaluationReport(String batchName,
+                               int totalLabelled,
                                List<ModelScore> models,
                                List<Disagreement> disagreements,
                                long processingMillis,

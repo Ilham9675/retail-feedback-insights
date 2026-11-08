@@ -1,222 +1,135 @@
 package com.retailstore.feedback.service;
 
-import com.retailstore.feedback.model.FeedbackEntry;
-import com.retailstore.feedback.model.EnhancedFeedback;
-import com.retailstore.feedback.model.FeedbackSummary;
 import com.retailstore.feedback.model.AiReview;
+import com.retailstore.feedback.model.EnhancedFeedback;
+import com.retailstore.feedback.model.FeedbackEntry;
+import com.retailstore.feedback.model.FeedbackSummary;
+import com.retailstore.feedback.persistence.FeedbackRecord;
+import com.retailstore.feedback.persistence.FeedbackRecordRepository;
+import com.retailstore.feedback.persistence.UploadBatch;
+import com.retailstore.feedback.persistence.UploadBatchRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Service for processing feedback data and enhancing it with AI insights.
+ * Reads stored review batches and enriches them with Gemini's sentiment, category and actionable insight.
+ * A batch is analysed once; the results are stored so later page views don't call the API again.
  */
 @Service
 public class FeedbackService {
 
     private static final Logger log = LoggerFactory.getLogger(FeedbackService.class);
+    static final String UNCATEGORIZED = "Uncategorized";
 
-    @Autowired
-    private GeminiFeedbackAnalyzer geminiAnalyzer;
+    private final GeminiFeedbackAnalyzer geminiAnalyzer;
+    private final UploadBatchRepository batchRepository;
+    private final FeedbackRecordRepository recordRepository;
+    private final int batchSize;
 
-    // Number of reviews sent to Gemini in one request
-    @Value("${feedback.ai.batch-size:25}")
-    private int batchSize;
-
-    // Sentiment analysis output produced by the sentiment-core module
-    @Value("${feedback.input-file:data/sentiment_feedback_output.txt}")
-    private String sentimentFilePath;
-
-    // Patterns for parsing feedback file
-    private static final Pattern FEEDBACK_PATTERN = Pattern.compile("Feedback #(\\d+)");
-    private static final Pattern CUSTOMER_PATTERN = Pattern.compile("Customer:\\s*(.+)");
-    private static final Pattern DEPARTMENT_PATTERN = Pattern.compile("Department:\\s*(.+)");
-    private static final Pattern DATE_PATTERN = Pattern.compile("Date:\\s*(.+)");
-    private static final Pattern COMMENT_PATTERN = Pattern.compile("Comment:\\s*(.+)");
-    private static final Pattern SENTIMENT_PATTERN = Pattern.compile("Sentiment:\\s*(.+)");
-
-    // Cache for feedback data
-    private List<EnhancedFeedback> enhancedFeedbackCache = null;
-    private long lastProcessingMillis;
-    private int lastAiCalls;
-
-    /**
-     * Reads feedback data from the sentiment analysis output file.
-     *
-     * @return List of FeedbackEntry objects
-     * @throws IOException If an I/O error occurs
-     */
-    public List<FeedbackEntry> readFeedbackData() throws IOException {
-        List<FeedbackEntry> entries = new ArrayList<>();
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(sentimentFilePath, StandardCharsets.UTF_8))) {
-            StringBuilder entryText = new StringBuilder();
-            String line;
-
-            boolean inDetailedSection = false;
-            while ((line = reader.readLine()) != null) {
-                // Check if we've reached the detailed feedback section
-                if (line.contains("## Detailed Feedback Entries")) {
-                    inDetailedSection = true;
-                    continue;
-                }
-
-                if (!inDetailedSection) {
-                    continue;
-                }
-
-                // Process each line
-                if (line.trim().isEmpty() && entryText.length() > 0) {
-                    // We've reached the end of an entry
-                    FeedbackEntry entry = parseFeedbackEntry(entryText.toString());
-                    if (entry != null) {
-                        entries.add(entry);
-                    }
-                    entryText = new StringBuilder();
-                } else {
-                    entryText.append(line).append("\n");
-                }
-            }
-
-            // Process the last entry if there is one
-            if (entryText.length() > 0) {
-                FeedbackEntry entry = parseFeedbackEntry(entryText.toString());
-                if (entry != null) {
-                    entries.add(entry);
-                }
-            }
-        }
-
-        return entries;
+    public FeedbackService(GeminiFeedbackAnalyzer geminiAnalyzer,
+                           UploadBatchRepository batchRepository,
+                           FeedbackRecordRepository recordRepository,
+                           // Number of reviews sent to Gemini in one request
+                           @Value("${feedback.ai.batch-size:25}") int batchSize) {
+        this.geminiAnalyzer = geminiAnalyzer;
+        this.batchRepository = batchRepository;
+        this.recordRepository = recordRepository;
+        this.batchSize = batchSize;
     }
 
-    /**
-     * Parses a feedback entry from text.
-     *
-     * @param text Text containing a feedback entry
-     * @return FeedbackEntry object or null if parsing fails
-     */
-    private FeedbackEntry parseFeedbackEntry(String text) {
-        FeedbackEntry entry = new FeedbackEntry();
-
-        // Extract feedback ID
-        Matcher idMatcher = FEEDBACK_PATTERN.matcher(text);
-        if (idMatcher.find()) {
-            entry.setId(Integer.parseInt(idMatcher.group(1)));
-        } else {
-            return null;
-        }
-
-        // Extract customer
-        Matcher customerMatcher = CUSTOMER_PATTERN.matcher(text);
-        if (customerMatcher.find()) {
-            entry.setCustomer(customerMatcher.group(1));
-        }
-
-        // Extract department
-        Matcher departmentMatcher = DEPARTMENT_PATTERN.matcher(text);
-        if (departmentMatcher.find()) {
-            entry.setDepartment(departmentMatcher.group(1));
-        }
-
-        // Extract date
-        Matcher dateMatcher = DATE_PATTERN.matcher(text);
-        if (dateMatcher.find()) {
-            entry.setDate(dateMatcher.group(1));
-        }
-
-        // Extract comment
-        Matcher commentMatcher = COMMENT_PATTERN.matcher(text);
-        if (commentMatcher.find()) {
-            entry.setComment(commentMatcher.group(1));
-        }
-
-        // Extract sentiment
-        Matcher sentimentMatcher = SENTIMENT_PATTERN.matcher(text);
-        if (sentimentMatcher.find()) {
-            // CoreNLP writes "Positive" / "Very negative"; the dashboard styles expect POSITIVE / VERY_NEGATIVE
-            entry.setSentiment(normalizeSentiment(sentimentMatcher.group(1)));
-        }
-
-        return entry;
+    public List<UploadBatch> listBatches() {
+        return batchRepository.findAllByOrderByCreatedAtDesc();
     }
 
-    /**
-     * Enhances feedback with Gemini's sentiment, category and actionable insight.
-     * Reviews are sent in batches so 50 reviews need only a few API calls.
-     *
-     * @return List of EnhancedFeedback objects
-     * @throws IOException If an I/O error occurs
-     */
-    public synchronized List<EnhancedFeedback> getEnhancedFeedback() throws IOException {
-        // Return cached data if available
-        if (enhancedFeedbackCache != null) {
-            return enhancedFeedbackCache;
-        }
+    /** The requested batch, or the most recent one when {@code batchId} is null. */
+    public UploadBatch getBatch(Long batchId) {
+        return (batchId == null ? batchRepository.findFirstByOrderByCreatedAtDesc() : batchRepository.findById(batchId))
+                .orElseThrow(() -> new NoSuchElementException(batchId == null
+                        ? "No feedback has been imported yet."
+                        : "Feedback batch " + batchId + " does not exist."));
+    }
 
-        List<FeedbackEntry> entries = readFeedbackData();
-        List<EnhancedFeedback> enhancedEntries = new ArrayList<>();
+    /** Stored reviews of a batch, analysed with Gemini first if that hasn't happened yet. */
+    public synchronized List<FeedbackRecord> getAnalyzedRecords(Long batchId) {
+        UploadBatch batch = getBatch(batchId);
+        List<FeedbackRecord> records = recordRepository.findByBatchIdOrderByReviewId(batch.getId());
+        if (!batch.isAnalyzed()) {
+            analyze(batch, records, records);
+        }
+        return records;
+    }
+
+    /** Runs Gemini again for the reviews of a batch that have no result yet (for example after a quota error). */
+    public synchronized void reanalyzeFailed(Long batchId) {
+        UploadBatch batch = getBatch(batchId);
+        List<FeedbackRecord> records = recordRepository.findByBatchIdOrderByReviewId(batch.getId());
+        List<FeedbackRecord> pending = records.stream().filter(r -> r.getAiSentiment() == null).toList();
+        if (!pending.isEmpty()) {
+            analyze(batch, records, pending);
+        }
+    }
+
+    public List<EnhancedFeedback> getEnhancedFeedback(Long batchId) {
+        return getAnalyzedRecords(batchId).stream().map(FeedbackService::toEnhancedFeedback).toList();
+    }
+
+    private void analyze(UploadBatch batch, List<FeedbackRecord> all, List<FeedbackRecord> pending) {
         long start = System.currentTimeMillis();
         int calls = 0;
 
-        for (int from = 0; from < entries.size(); from += batchSize) {
-            List<FeedbackEntry> batch = entries.subList(from, Math.min(from + batchSize, entries.size()));
-            log.info("Analyzing reviews {}-{} of {} with Gemini", from + 1, from + batch.size(), entries.size());
+        for (int from = 0; from < pending.size(); from += batchSize) {
+            List<FeedbackRecord> chunk = pending.subList(from, Math.min(from + batchSize, pending.size()));
+            log.info("Batch {}: analyzing reviews {}-{} of {} with Gemini",
+                    batch.getId(), from + 1, from + chunk.size(), pending.size());
 
             Map<Integer, AiReview> resultsById = new HashMap<>();
             String failure = null;
             try {
                 calls++;
-                for (AiReview review : geminiAnalyzer.analyze(batch)) {
+                List<FeedbackEntry> input = chunk.stream().map(FeedbackService::toEntry).toList();
+                for (AiReview review : geminiAnalyzer.analyze(input)) {
                     resultsById.put(review.id(), review);
                 }
             } catch (Exception e) {
-                log.warn("Gemini batch {}-{} failed: {}", from + 1, from + batch.size(), e.getMessage());
+                log.warn("Gemini request for batch {} failed: {}", batch.getId(), e.getMessage());
                 failure = e.getMessage();
             }
 
-            for (FeedbackEntry entry : batch) {
-                enhancedEntries.add(enhance(entry, resultsById.get(entry.getId()), failure));
+            for (FeedbackRecord record : chunk) {
+                apply(record, resultsById.get(record.getReviewId()), failure);
             }
         }
 
-        lastProcessingMillis = System.currentTimeMillis() - start;
-        lastAiCalls = calls;
-        log.info("Enhanced {} reviews with {} Gemini call(s) in {} ms", enhancedEntries.size(), calls, lastProcessingMillis);
-
-        // Cache the enhanced feedback
-        enhancedFeedbackCache = enhancedEntries;
-
-        return enhancedEntries;
+        recordRepository.saveAll(pending);
+        int failed = (int) all.stream().filter(r -> r.getAiSentiment() == null).count();
+        long elapsed = System.currentTimeMillis() - start;
+        batch.markAnalyzed(calls, elapsed, failed);
+        batchRepository.save(batch);
+        log.info("Batch {}: {} review(s) analyzed with {} Gemini call(s) in {} ms, {} without a result",
+                batch.getId(), pending.size(), calls, elapsed, failed);
     }
 
-    private EnhancedFeedback enhance(FeedbackEntry entry, AiReview review, String failure) {
-        EnhancedFeedback enhanced = new EnhancedFeedback(entry);
+    private static void apply(FeedbackRecord record, AiReview review, String failure) {
         if (review == null) {
-            enhanced.setCategory("Uncategorized");
-            enhanced.setActionableInsight(failure == null
+            record.applyAnalysis(null, UNCATEGORIZED, failure == null
                     ? "Gemini returned no result for this review."
                     : "Could not generate insight due to API error: " + failure);
-            return enhanced;
+            return;
         }
-        enhanced.setAiSentiment(normalizeSentiment(review.sentiment()));
         // The model occasionally invents a category; keep the dashboard to the fixed list
-        enhanced.setCategory(GeminiFeedbackAnalyzer.CATEGORIES.contains(review.category()) ? review.category() : "Other");
-        enhanced.setActionableInsight(review.actionableInsight());
-        return enhanced;
+        String category = GeminiFeedbackAnalyzer.CATEGORIES.contains(review.category()) ? review.category() : "Other";
+        record.applyAnalysis(normalizeSentiment(review.sentiment()), category, review.actionableInsight());
     }
 
     /** "Very positive" / "positive" -> "VERY_POSITIVE" / "POSITIVE". */
@@ -224,54 +137,49 @@ public class FeedbackService {
         return sentiment == null ? null : sentiment.trim().toUpperCase().replace(' ', '_');
     }
 
-    public long getLastProcessingMillis() { return lastProcessingMillis; }
+    private static FeedbackEntry toEntry(FeedbackRecord r) {
+        return new FeedbackEntry(r.getReviewId(), r.getCustomer(), r.getDepartment(), r.getReviewDate(),
+                r.getComment(), r.getCoreNlpSentiment());
+    }
 
-    public int getLastAiCalls() { return lastAiCalls; }
+    static EnhancedFeedback toEnhancedFeedback(FeedbackRecord r) {
+        EnhancedFeedback feedback = new EnhancedFeedback(toEntry(r));
+        feedback.setAiSentiment(r.getAiSentiment());
+        feedback.setCategory(r.getCategory());
+        feedback.setActionableInsight(r.getActionableInsight());
+        return feedback;
+    }
 
     /**
-     * Generates a summary of the feedback data for the dashboard.
-     *
-     * @return FeedbackSummary object
-     * @throws IOException If an I/O error occurs
+     * Generates a summary of a batch for the dashboard.
+     * Sentiment counts use Gemini's result, falling back to CoreNLP where Gemini has none.
      */
-    public FeedbackSummary generateFeedbackSummary() throws IOException {
-        List<EnhancedFeedback> allFeedback = getEnhancedFeedback();
+    public FeedbackSummary generateFeedbackSummary(Long batchId) {
+        List<EnhancedFeedback> allFeedback = getEnhancedFeedback(batchId);
         FeedbackSummary summary = new FeedbackSummary();
-
-        // Set total feedback count
         summary.setTotalFeedback(allFeedback.size());
+        summary.setSentimentCounts(countBy(allFeedback,
+                f -> f.getAiSentiment() != null ? f.getAiSentiment() : orUnknown(f.getSentiment())));
+        summary.setCategoryCounts(countBy(allFeedback, f -> orUnknown(f.getCategory())));
+        summary.setDepartmentCounts(countBy(allFeedback, f -> orUnknown(f.getDepartment())));
 
-        // Count sentiments
-        Map<String, Integer> sentimentCounts = new HashMap<>();
-        for (EnhancedFeedback feedback : allFeedback) {
-            String sentiment = feedback.getSentiment();
-            sentimentCounts.put(sentiment, sentimentCounts.getOrDefault(sentiment, 0) + 1);
-        }
-        summary.setSentimentCounts(sentimentCounts);
-
-        // Count categories
-        Map<String, Integer> categoryCounts = new HashMap<>();
-        for (EnhancedFeedback feedback : allFeedback) {
-            String category = feedback.getCategory();
-            categoryCounts.put(category, categoryCounts.getOrDefault(category, 0) + 1);
-        }
-        summary.setCategoryCounts(categoryCounts);
-
-        // Count departments
-        Map<String, Integer> departmentCounts = new HashMap<>();
-        for (EnhancedFeedback feedback : allFeedback) {
-            String department = feedback.getDepartment();
-            departmentCounts.put(department, departmentCounts.getOrDefault(department, 0) + 1);
-        }
-        summary.setDepartmentCounts(departmentCounts);
-
-        // Get recent feedback (last 5 entries)
-        List<EnhancedFeedback> recentFeedback = allFeedback.stream()
+        // Most recent = highest review ids
+        summary.setRecentFeedback(allFeedback.stream()
                 .sorted(Comparator.comparing(EnhancedFeedback::getId).reversed())
                 .limit(5)
-                .collect(Collectors.toList());
-        summary.setRecentFeedback(recentFeedback);
-
+                .collect(Collectors.toList()));
         return summary;
+    }
+
+    private static Map<String, Integer> countBy(List<EnhancedFeedback> feedback, Function<EnhancedFeedback, String> key) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (EnhancedFeedback f : feedback) {
+            counts.merge(key.apply(f), 1, Integer::sum);
+        }
+        return counts;
+    }
+
+    private static String orUnknown(String value) {
+        return value == null || value.isBlank() ? "Unknown" : value;
     }
 }

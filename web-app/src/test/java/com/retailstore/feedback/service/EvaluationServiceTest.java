@@ -12,23 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EvaluationServiceTest {
 
     @Test
-    void parsesLabelsFromRawDatasetHeaders() {
-        String raw = """
-                Feedback #1 [POSITIVE]
-                Comment: Great
-                Sentiment: POSITIVE
-
-                Feedback #2 [NEGATIVE]
-                Comment: Bad
-                """;
-
-        assertThat(EvaluationService.parseLabels(raw))
-                .containsEntry(1, "POSITIVE")
-                .containsEntry(2, "NEGATIVE")
-                .hasSize(2);
-    }
-
-    @Test
     void collapsesFiveClassSentimentToThree() {
         assertThat(EvaluationService.toThreeClass("Very positive")).isEqualTo("POSITIVE");
         assertThat(EvaluationService.toThreeClass("VERY_NEGATIVE")).isEqualTo("NEGATIVE");

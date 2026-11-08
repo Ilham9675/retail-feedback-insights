@@ -1,0 +1,11 @@
+id,customer,department,date,comment,label
+1,Jane Smith,Checkout,2025-06-01,"Fast checkout, and the cashier was really friendly.",POSITIVE
+2,Ahmad Yusuf,Grocery,2025-06-01,The milk I bought was already expired.,NEGATIVE
+3,Maria Lopez,Electronics,2025-06-02,The staff explained the warranty options clearly.,POSITIVE
+4,Kevin Tan,Online Shopping,2025-06-02,My order arrived two days later than promised.,NEGATIVE
+5,Siti Rahma,Clothing,2025-06-03,Prices are about the same as other stores.,NEUTRAL
+6,David Kim,Customer Service,2025-06-03,I waited 20 minutes and nobody answered my question.,NEGATIVE
+7,Laura Chen,Home Goods,2025-06-04,Nice selection of kitchen items.,POSITIVE
+8,Budi Santoso,Store Environment,2025-06-04,"The store was clean, but the music was too loud.",NEUTRAL
+9,Emma Wilson,Returns,2025-06-05,The return was processed quickly without any questions.,POSITIVE
+10,Rizky Pratama,Website/App,2025-06-05,The app keeps logging me out during checkout.,NEGATIVE

@@ -13,26 +13,23 @@
     </style>
 </head>
 <body>
-<nav class="navbar navbar-dark bg-primary mb-4">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1">Retail Store Customer Feedback Dashboard</span>
-        <div>
-            <a class="btn btn-sm btn-outline-light" href="/">Dashboard</a>
-            <a class="btn btn-sm btn-light" href="/evaluation">Model Evaluation</a>
-        </div>
-    </div>
-</nav>
+<nav th:replace="~{fragments/nav :: navbar('evaluation')}"></nav>
 
 <div class="container">
-    <h4 class="mb-1">Sentiment accuracy against dataset labels</h4>
-    <p class="text-muted">
+    <h4 class="mb-1">Sentiment accuracy against dataset labels: <span th:text="${report.batchName}">Sample</span></h4>
+    <div th:if="${report.totalLabelled == 0}" class="alert alert-info mt-3">
+        This batch has no sentiment labels, so accuracy can't be measured.
+        Add a <code>label</code> column (POSITIVE / NEUTRAL / NEGATIVE) to your CSV, or use the
+        <code>Feedback #1 [POSITIVE]</code> header format, to evaluate the models.
+    </div>
+    <p class="text-muted" th:if="${report.totalLabelled > 0}">
         <span th:text="${report.totalLabelled}">50</span> labelled reviews.
         Gemini analysed them with <span th:text="${report.aiCalls}">2</span> request(s) in
         <span th:text="${#numbers.formatDecimal(report.processingMillis / 1000.0, 1, 1)}">10.0</span> s.
         CoreNLP's five classes are collapsed to POSITIVE / NEUTRAL / NEGATIVE.
     </p>
 
-    <div class="row">
+    <div class="row" th:if="${report.totalLabelled > 0}">
         <div class="col-md-6" th:each="m : ${report.models}">
             <div class="card">
                 <div class="card-body">
@@ -61,7 +58,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" th:if="${report.totalLabelled > 0}">
         <div class="card-header bg-light">
             <h5 class="mb-0">Reviews where a model disagrees with the label
                 (<span th:text="${report.disagreements.size()}">0</span>)</h5>
