@@ -2,7 +2,7 @@
 
 AI-powered customer feedback analytics for retail stores, built with **Java 17, Spring Boot 3.5, Spring AI, Google Gemini and Stanford CoreNLP**.
 
-Upload customer reviews as CSV or text, in **English or Indonesian** (including informal Indonesian); each review gets a sentiment label, a problem category and a concrete action item written in the review's language. Results are stored in a database and shown on a filterable dashboard with sentiment, category and department breakdowns and a weekly sentiment trend, plus an evaluation page that measures how accurate each sentiment model is.
+Upload customer reviews as CSV or text, in **English or Indonesian** (including informal Indonesian); each review gets a sentiment label, a problem category and a concrete action item written in the review's language. Results are stored in a database and shown on a filterable dashboard with sentiment, category and department breakdowns and a weekly sentiment trend, an executive summary with the main issues and priority actions per department, and an evaluation page that measures how accurate each sentiment model is.
 
 > Started as the final project of IBM's *Generative AI for Java and Spring Development* course and is being extended as a portfolio project. See [Origin and attribution](#origin-and-attribution).
 
@@ -34,6 +34,12 @@ The app ships a second, labelled sample of 30 Indonesian reviews written the way
 
 ![Evaluation of the Indonesian sample: Gemini 90%](docs/evaluation_id.jpg)
 
+### Executive summary per department
+
+For managers who won't read 50 reviews, the *Executive Summary* page asks Gemini, in **one request per batch**, for an overview plus up to three main issues and three priority actions for every department, written in the language of the reviews. The result is stored, so opening the page again costs nothing; next to Gemini's text the page shows the measured review count and negative share, and departments are ordered by negative reviews. Generating took about 7-8 seconds for the 50-review English and the 30-review Indonesian sample.
+
+![Executive summary of the Indonesian sample](docs/summary_id.jpg)
+
 ## How it works
 
 ```mermaid
@@ -48,6 +54,7 @@ flowchart LR
     D <-->|25 reviews per request<br/>structured JSON| E[(Google Gemini)]
     D --> F[Dashboard /]
     D --> I[Evaluation /evaluation]
+    D --> S[Executive summary /summary]
     D --> G[REST API]
 ```
 
@@ -108,6 +115,9 @@ See [.env.example](.env.example).
 |---|---|---|
 | `GET` | `/?batch={id}&department=&sentiment=&category=&from=&to=` | Dashboard (HTML); filters are optional, dates are `YYYY-MM-DD` |
 | `GET` | `/evaluation?batch={id}` | Sentiment accuracy, confusion matrices and disagreements (HTML) |
+| `GET` | `/summary?batch={id}` | Executive summary per department (HTML); shows a generate button until one exists |
+| `POST` | `/batches/{id}/summary` | Generate or regenerate the executive summary (one Gemini request) |
+| `GET` | `/api/batches/{id}/summary` | The stored summary: `overview` and `departments[]` with `summary`, `topIssues`, `priorityActions` (JSON); `404` if none was generated, never calls Gemini |
 | `GET`, `POST` | `/upload` | Upload form / upload a CSV or TXT file |
 | `POST` | `/batches/{id}/reanalyze` | Retry Gemini, in the background, for reviews without a result |
 | `GET` | `/api/batches/{id}/status` | Analysis progress: `analyzed`, `running`, `processedReviews`, `reviewCount`, `failedReviews` (JSON) |
@@ -140,6 +150,7 @@ Example review from `/getfeedback`:
 - **Multilingual by prompt, fixed categories.** The system prompt tells Gemini that reviews may be English or informal Indonesian, to report the language (ISO 639-1), to keep categories in English so charts stay comparable, and to write the insight in the review's language. The evaluation page drops CoreNLP for batches it can't analyse.
 - **Background analysis with progress.** Uploads return immediately; a single-thread worker sends the reviews to Gemini (one batch at a time, which also respects free-tier rate limits) and saves progress after every request. The progress page polls `/api/batches/{id}/status` and reloads when the batch is done. Repeated page loads don't queue the same batch twice, and an "analyzing" flag left behind by a crash is cleared on startup.
 - **Filters and trend from stored data.** Filtering and the weekly trend are computed from the stored results, so they cost no API calls. Sentiment filters and charts use Gemini's label, falling back to CoreNLP; the trend groups reviews by ISO week (Monday start) and fills empty weeks with zeros so the time axis is continuous; reviews without a valid date are left out of date filters and the trend.
+- **Executive summary on demand.** The summary is a second structured-output call (`.entity(ExecutiveSummary.class)`) with its own system prompt, fed with the already analysed reviews (department, sentiment, category, comment cut to 300 characters) so it costs one request even for a 200-review upload. It is only generated when someone presses the button, stored as JSON with the batch, and its review counts come from the database rather than from the model, so the numbers on the page can't be hallucinated.
 - **Analyse once, store the result.** Batches and Gemini results live in a database (H2 file by default, any JDBC URL via `DATABASE_URL`), so a batch costs API quota only the first time it is opened, also across restarts.
 - **Failures degrade, not crash.** If a request fails (quota, network), its reviews are marked `Uncategorized` with the reason, the dashboard shows how many are missing, and a "Retry with Gemini" button re-sends only those reviews.
 - **Upload validation.** The parser accepts CSV (any column order, optional columns, quoted commas, UTF-8 BOM) and the dataset's text format, and rejects files without comments, bad ids or more than 200 reviews with a message on the page.
@@ -150,13 +161,13 @@ Example review from `/getfeedback`:
 
 ## Tests
 
-`mvn test` runs 29 tests without network access (Gemini is mocked, the database is in-memory):
+`mvn test` runs 34 tests without network access (Gemini is mocked, the database is in-memory):
 
-- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; dashboard and API filters return the right subset; invalid uploads store nothing; unknown batches return 404.
+- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; dashboard and API filters return the right subset; the executive summary is generated only on request, once, and served from the database afterwards, and a failed request shows an error and stores nothing; invalid uploads store nothing; unknown batches return 404.
 - `FeedbackFileParserTest`: CSV variants, the raw text dataset, the CoreNLP output format and invalid files.
 - `EvaluationServiceTest`: five-to-three class mapping, accuracy and confusion matrix.
 - `FeedbackSummaryTest`: filter matching (department, displayed sentiment, category, inclusive date range, blank values) and the weekly trend (Monday grouping, empty weeks, undated reviews).
-- `GeminiFeedbackAnalyzerTest`: the prompt covers Indonesian reviews, the language field and every category.
+- `GeminiFeedbackAnalyzerTest`: the prompt covers Indonesian reviews, the language field and every category; the summary prompt asks for up to three issues and actions per department; summary input uses the displayed sentiment and shortens long comments; summary sections follow the measured negative counts.
 - `FeedbackServiceApplicationTests`: the Spring context starts.
 
 ## Roadmap
@@ -167,7 +178,7 @@ Example review from `/getfeedback`:
 - [x] **Phase 2C:** Indonesian reviews (labelled 30-review sample, language detection, insights in the review's language): Gemini 90%
 - [x] **Phase 2B:** background analysis with a live progress page and status endpoint
 - [x] **Phase 2D:** dashboard filters (department, sentiment, category, date range) and a weekly sentiment trend
-- [ ] **Phase 2E:** per-department executive summary
+- [x] **Phase 2E:** per-department executive summary (main issues + priority actions), one Gemini request per batch
 - [ ] **Phase 3:** OpenAPI docs, Spring AI evaluators for insight quality, Docker Compose, GitHub Actions, live demo
 - [ ] **Phase 4:** "ask your feedback" chat (RAG), alerts on negative spikes
 

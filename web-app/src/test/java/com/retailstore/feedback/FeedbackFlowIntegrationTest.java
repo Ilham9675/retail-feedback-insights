@@ -3,6 +3,7 @@ package com.retailstore.feedback;
 import com.retailstore.feedback.ingest.SampleDataLoader;
 import com.retailstore.feedback.model.AiReview;
 import com.retailstore.feedback.model.EvaluationReport;
+import com.retailstore.feedback.model.ExecutiveSummary;
 import com.retailstore.feedback.model.FeedbackEntry;
 import com.retailstore.feedback.persistence.FeedbackRecord;
 import com.retailstore.feedback.persistence.UploadBatch;
@@ -27,6 +28,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,6 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -262,6 +265,53 @@ class FeedbackFlowIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(3))
                 .andExpect(jsonPath("$[*].department").value(org.hamcrest.Matchers.everyItem(
                         org.hamcrest.Matchers.is("Returns"))));
+    }
+
+    @Test
+    void executiveSummaryIsGeneratedOnRequestOnceAndStored() throws Exception {
+        Long sampleId = feedbackService.getBatch(null).getId();
+        feedbackService.getAnalyzedRecords(sampleId);
+        doAnswer(invocation -> new ExecutiveSummary("Returns needs attention.", List.of(
+                new ExecutiveSummary.DepartmentSummary("Returns", "Slow refunds.",
+                        List.of("Refunds take weeks"), List.of("Process refunds within 3 days")))))
+                .when(analyzer).summarize(anyList());
+
+        // Opening the page shows the counts but does not call Gemini
+        mvc.perform(get("/summary").param("batch", sampleId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("No summary for this batch yet")));
+        mvc.perform(get("/api/batches/{id}/summary", sampleId)).andExpect(status().isNotFound());
+        verify(analyzer, never()).summarize(anyList());
+
+        mvc.perform(post("/batches/{id}/summary", sampleId))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/summary?batch=*"));
+
+        // One request with every review of the batch
+        verify(analyzer, times(1)).summarize(argThat(reviews -> reviews.size() == 50));
+        mvc.perform(get("/summary").param("batch", sampleId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Process refunds within 3 days")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("8 reviews")));
+        mvc.perform(get("/api/batches/{id}/summary", sampleId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.overview").value("Returns needs attention."))
+                .andExpect(jsonPath("$.departments[0].topIssues[0]").value("Refunds take weeks"));
+        verify(analyzer, times(1)).summarize(anyList());
+    }
+
+    @Test
+    void failedSummaryShowsAnErrorAndStoresNothing() throws Exception {
+        Long sampleId = feedbackService.getBatch(null).getId();
+        feedbackService.getAnalyzedRecords(sampleId);
+        doThrow(new RuntimeException("quota exceeded")).when(analyzer).summarize(anyList());
+
+        mvc.perform(post("/batches/{id}/summary", sampleId))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("summaryError",
+                        org.hamcrest.Matchers.containsString("quota exceeded")));
+
+        mvc.perform(get("/api/batches/{id}/summary", sampleId)).andExpect(status().isNotFound());
     }
 
     @Test

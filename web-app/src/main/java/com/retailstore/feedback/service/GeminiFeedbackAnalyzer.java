@@ -3,6 +3,7 @@ package com.retailstore.feedback.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.retailstore.feedback.model.AiReview;
+import com.retailstore.feedback.model.ExecutiveSummary;
 import com.retailstore.feedback.model.FeedbackEntry;
 
 import org.springframework.ai.chat.client.ChatClient;
@@ -36,6 +37,21 @@ public class GeminiFeedbackAnalyzer {
             Return one result per review, in the same order, and nothing else.
             """.formatted(String.join(", ", CATEGORIES));
 
+    static final String SUMMARY_PROMPT = """
+            You are a retail operations consultant writing a short report for store management.
+            You receive customer reviews that were already analysed: each has a department, a sentiment,
+            a category and the comment. Reviews may be in English or informal Indonesian.
+            Return:
+            - overview: two or three sentences about the whole set of reviews
+            - departments: one entry for every department in the input, the most problematic department first, with
+              - department: the department name exactly as given
+              - summary: one or two sentences on how customers experience this department
+              - topIssues: up to three recurring problems, most frequent first (fewer if there are not three real problems)
+              - priorityActions: up to three concrete actions for the department manager, most urgent first
+            Base everything only on the reviews; do not invent facts or numbers.
+            Write all text in the language used by most of the reviews (English or Indonesian).
+            """;
+
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -59,6 +75,18 @@ public class GeminiFeedbackAnalyzer {
         return results == null ? List.of() : results;
     }
 
+    /**
+     * Writes a management summary of already analysed reviews in a single request.
+     */
+    public ExecutiveSummary summarize(List<SummaryInput> reviews) {
+        return chatClient.prompt()
+                .system(SUMMARY_PROMPT)
+                .user(u -> u.text("Summarize these analysed customer reviews per department:\n{reviews}")
+                        .param("reviews", toJson(reviews)))
+                .call()
+                .entity(ExecutiveSummary.class);
+    }
+
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -68,5 +96,9 @@ public class GeminiFeedbackAnalyzer {
     }
 
     private record ReviewInput(int id, String department, String comment) {
+    }
+
+    /** One analysed review as sent to the summary prompt. */
+    public record SummaryInput(String department, String sentiment, String category, String comment) {
     }
 }

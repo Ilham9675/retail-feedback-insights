@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Summary - Customer Feedback Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        .card { margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .dept-card .card-header { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; }
+        .dept-card ol { padding-left: 1.2rem; margin-bottom: 0; }
+        .dept-card li { margin-bottom: .35rem; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar('summary')}"></nav>
+
+<div class="container">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h4 class="mb-1">Executive summary: <span th:text="${currentBatch.name}">Sample</span></h4>
+            <p class="text-muted small mb-0" th:if="${executiveSummary != null}">
+                Written by Gemini from the analysed reviews on <span th:text="${generatedAt}">2026-11-10 10:00</span>.
+                Counts are computed from the stored results; departments with the most negative reviews come first.
+            </p>
+        </div>
+        <form method="post" th:action="@{/batches/{id}/summary(id=${currentBatch.id})}"
+              onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Writing summary...';">
+            <button type="submit" class="btn btn-primary btn-sm"
+                    th:text="${executiveSummary == null} ? 'Generate summary (1 Gemini request)' : 'Regenerate (1 Gemini request)'">
+                Generate summary
+            </button>
+        </form>
+    </div>
+
+    <div th:if="${summaryError}" class="alert alert-danger" th:text="${summaryError}">Error</div>
+
+    <!-- Not generated yet: show the numbers and explain what the button does -->
+    <div th:if="${executiveSummary == null}">
+        <div class="alert alert-info">
+            No summary for this batch yet. Press the button to let Gemini write the three main issues and three
+            priority actions for every department. It takes one request and the result is stored, so opening this page
+            later costs nothing.
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Departments by negative reviews</h5>
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Department</th><th class="text-end">Reviews</th><th class="text-end">Negative</th></tr></thead>
+                    <tbody>
+                    <tr th:each="s : ${stats.values()}">
+                        <td th:text="${s.department}">Returns</td>
+                        <td class="text-end" th:text="${s.reviews}">10</td>
+                        <td class="text-end" th:text="${s.negative + ' (' + s.negativeShare + '%)'}">4 (40%)</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${executiveSummary != null}">
+        <div class="card border-primary">
+            <div class="card-body">
+                <h5 class="card-title">Overview</h5>
+                <p class="mb-0" th:text="${executiveSummary.overview}">Overview text</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6" th:each="d : ${departments}">
+                <div class="card dept-card h-100" th:with="s=${stats.get(d.department)}">
+                    <div class="card-header">
+                        <h5 class="mb-0" th:text="${d.department}">Returns</h5>
+                        <span th:if="${s != null}" class="small">
+                            <span class="badge bg-secondary" th:text="${s.reviews + ' reviews'}">10 reviews</span>
+                            <span class="badge"
+                                  th:classappend="${s.negativeShare >= 40} ? 'bg-danger' : (${s.negativeShare >= 20} ? 'bg-warning text-dark' : 'bg-success')"
+                                  th:text="${s.negativeShare + '% negative'}">40% negative</span>
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted" th:text="${d.summary}">Summary</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-danger">Main issues</h6>
+                                <ol>
+                                    <li th:each="issue : ${d.topIssues}" th:text="${issue}">Issue</li>
+                                </ol>
+                                <p class="small text-muted mb-0" th:if="${#lists.isEmpty(d.topIssues)}">No recurring issues.</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success">Priority actions</h6>
+                                <ol>
+                                    <li th:each="action : ${d.priorityActions}" th:text="${action}">Action</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
