@@ -1,5 +1,7 @@
 # Retail Feedback Insights
 
+[![CI](https://github.com/Ilham9675/retail-feedback-insights/actions/workflows/ci.yml/badge.svg)](https://github.com/Ilham9675/retail-feedback-insights/actions/workflows/ci.yml)
+
 AI-powered customer feedback analytics for retail stores, built with **Java 17, Spring Boot 3.5, Spring AI, Google Gemini and Stanford CoreNLP**.
 
 Upload customer reviews as CSV or text, in **English or Indonesian** (including informal Indonesian); each review gets a sentiment label, a problem category and a concrete action item written in the review's language. Results are stored in a database and shown on a filterable dashboard with sentiment, category and department breakdowns and a weekly sentiment trend, an executive summary with the main issues and priority actions per department, and an evaluation page that measures how accurate each sentiment model is.
@@ -65,6 +67,19 @@ flowchart LR
 
 ## Getting started
 
+### With Docker (app + PostgreSQL)
+
+Requirements: Docker. The image builds the app itself, so no JDK or Maven is needed.
+
+```bash
+export GEMINI_API_KEY=your-key            # or put GEMINI_API_KEY=... in a .env file (never commit it)
+docker compose up --build
+```
+
+Open <http://localhost:8080>. Reviews and AI results are stored in a PostgreSQL volume, so they survive `docker compose down` (add `-v` to delete them). Without a key the app still starts and shows the sample data, but reviews stay "Uncategorized".
+
+### With Maven
+
 Requirements: JDK 17+, Maven 3.9+, and a free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 
 ```bash
@@ -104,12 +119,15 @@ The first build downloads the CoreNLP models (~470 MB).
 | `FEEDBACK_INPUT_FILE` | `data/sentiment_feedback_output.txt` | CoreNLP output to read |
 | `FEEDBACK_LABELS_FILE` | `data/store_feedback.txt` | Labels for the sample dataset |
 | `FEEDBACK_UPLOAD_MAX_REVIEWS` | `200` | Maximum reviews per upload |
-| `DATABASE_URL` | `jdbc:h2:file:./data/db/feedback` | JDBC URL of the database |
+| `DATABASE_URL` | `jdbc:h2:file:./data/db/feedback` | JDBC URL of the database (H2 or PostgreSQL) |
+| `DATABASE_USERNAME`, `DATABASE_PASSWORD` | `sa`, empty | Database credentials |
 | `PORT` | `8080` | HTTP port |
 
 See [.env.example](.env.example).
 
 ## Pages and API
+
+Interactive API docs (Swagger UI) are at <http://localhost:8080/swagger-ui.html>, the OpenAPI spec at `/v3/api-docs` and a health check at `/actuator/health`.
 
 | Method | Path | Returns |
 |---|---|---|
@@ -156,14 +174,15 @@ Example review from `/getfeedback`:
 - **Upload validation.** The parser accepts CSV (any column order, optional columns, quoted commas, UTF-8 BOM) and the dataset's text format, and rejects files without comments, bad ids or more than 200 reviews with a message on the page.
 - **Evaluation against ground truth.** The raw dataset carries a label per review (`Feedback #12 [NEGATIVE]`). `EvaluationService` collapses CoreNLP's five classes to three and reports accuracy and a confusion matrix per model.
 - **Configurable model.** The course code targeted `gemini-1.5-flash`, which Google retired, and `gemini-2.5-flash` was unavailable to new keys, so the model is a property.
+- **Container and CI.** A multi-stage Dockerfile builds only the web module (CoreNLP's 470 MB of models are not needed at runtime) and runs it on a JRE as a non-root user; Docker Compose adds PostgreSQL with a health check. GitHub Actions runs the tests on every push and then starts the Compose stack without a Gemini key and checks the health endpoint, the imported sample and the OpenAPI spec. The same entities run on H2 and PostgreSQL (the stored summary is a long `varchar`, not a `@Lob`, which PostgreSQL would turn into a large object).
 - **Secrets.** The API key comes only from the environment; tests start the Spring context with a dummy key and a mocked analyzer, so CI never needs a real key.
 - **Consistent output.** Numbers are formatted with `Locale.US` and files are read/written as UTF-8, so results are the same on any machine locale.
 
 ## Tests
 
-`mvn test` runs 34 tests without network access (Gemini is mocked, the database is in-memory):
+`mvn test` runs 35 tests without network access (Gemini is mocked, the database is in-memory):
 
-- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; dashboard and API filters return the right subset; the executive summary is generated only on request, once, and served from the database afterwards, and a failed request shows an error and stores nothing; invalid uploads store nothing; unknown batches return 404.
+- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; dashboard and API filters return the right subset; the executive summary is generated only on request, once, and served from the database afterwards, and a failed request shows an error and stores nothing; invalid uploads store nothing; unknown batches return 404; the OpenAPI spec covers only the JSON API and the health endpoint is up.
 - `FeedbackFileParserTest`: CSV variants, the raw text dataset, the CoreNLP output format and invalid files.
 - `EvaluationServiceTest`: five-to-three class mapping, accuracy and confusion matrix.
 - `FeedbackSummaryTest`: filter matching (department, displayed sentiment, category, inclusive date range, blank values) and the weekly trend (Monday grouping, empty weeks, undated reviews).
@@ -179,7 +198,8 @@ Example review from `/getfeedback`:
 - [x] **Phase 2B:** background analysis with a live progress page and status endpoint
 - [x] **Phase 2D:** dashboard filters (department, sentiment, category, date range) and a weekly sentiment trend
 - [x] **Phase 2E:** per-department executive summary (main issues + priority actions), one Gemini request per batch
-- [ ] **Phase 3:** OpenAPI docs, Spring AI evaluators for insight quality, Docker Compose, GitHub Actions, live demo
+- [x] **Phase 3A:** OpenAPI docs with Swagger UI, health endpoint, Docker Compose with PostgreSQL, GitHub Actions (tests + Compose smoke test)
+- [ ] **Phase 3B:** live demo, Spring AI evaluators for insight quality
 - [ ] **Phase 4:** "ask your feedback" chat (RAG), alerts on negative spikes
 
 ## Origin and attribution

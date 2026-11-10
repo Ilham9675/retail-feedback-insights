@@ -1,0 +1,34 @@
+# App + PostgreSQL. Start with:  docker compose up --build   then open http://localhost:8080
+# The Gemini key is read from your environment or a .env file next to this file (GEMINI_API_KEY=...).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: feedback
+      POSTGRES_USER: feedback
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-feedback}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feedback -d feedback"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/feedback
+      DATABASE_USERNAME: feedback
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-feedback}
+      # Without a key the app still starts; reviews then stay "Uncategorized"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-not-set}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+
+volumes:
+  db-data:

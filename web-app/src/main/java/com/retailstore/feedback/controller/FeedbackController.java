@@ -10,6 +10,9 @@ import com.retailstore.feedback.service.EvaluationService;
 import com.retailstore.feedback.service.ExecutiveSummaryService;
 import com.retailstore.feedback.service.FeedbackService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +40,7 @@ import java.util.NoSuchElementException;
  * the JSON endpoints wait for the analysis instead.
  */
 @Controller
+@Tag(name = "Feedback", description = "Analysed reviews, evaluation, executive summaries and analysis status")
 public class FeedbackController {
 
     private final FeedbackService feedbackService;
@@ -119,6 +123,8 @@ public class FeedbackController {
     }
 
     /** Stored executive summary as JSON; 404 when none was generated yet (this endpoint never calls Gemini). */
+    @Operation(summary = "Stored executive summary of a batch",
+            description = "Overview plus main issues and priority actions per department. 404 when none was generated; never calls Gemini.")
     @GetMapping("/api/batches/{id}/summary")
     @ResponseBody
     public ResponseEntity<ExecutiveSummary> summaryJson(@PathVariable Long id) {
@@ -133,6 +139,7 @@ public class FeedbackController {
     }
 
     /** Analysis progress, polled by the progress page. */
+    @Operation(summary = "Analysis progress of a batch", description = "Polled by the progress page while Gemini runs in the background.")
     @GetMapping("/api/batches/{id}/status")
     @ResponseBody
     public Map<String, Object> status(@PathVariable Long id) {
@@ -147,6 +154,9 @@ public class FeedbackController {
         return "analyzing";
     }
 
+    @Operation(summary = "Analysed reviews of a batch",
+            description = "CoreNLP sentiment plus Gemini sentiment, category and actionable insight. All parameters are optional; "
+                    + "batch defaults to the most recent one and dates are YYYY-MM-DD. Waits for the analysis if the batch is not analysed yet.")
     @GetMapping("/getfeedback")
     @ResponseBody
     public List<EnhancedFeedback> getFeedback(@RequestParam(required = false) Long batch,
@@ -158,12 +168,14 @@ public class FeedbackController {
         return feedbackService.getEnhancedFeedback(batch, FeedbackFilter.of(department, sentiment, category, from, to));
     }
 
+    @Operation(summary = "Sentiment accuracy of CoreNLP and Gemini against the dataset labels")
     @GetMapping("/api/evaluation")
     @ResponseBody
     public EvaluationReport evaluationJson(@RequestParam(required = false) Long batch) {
         return evaluationService.evaluate(feedbackService.getBatch(batch).getId());
     }
 
+    @Operation(summary = "All batches with review counts and analysis status")
     @GetMapping("/api/batches")
     @ResponseBody
     public List<UploadBatch> batches() {
