@@ -2,11 +2,13 @@ package com.retailstore.feedback.controller;
 
 import com.retailstore.feedback.model.EnhancedFeedback;
 import com.retailstore.feedback.model.EvaluationReport;
+import com.retailstore.feedback.model.FeedbackFilter;
 import com.retailstore.feedback.persistence.UploadBatch;
 import com.retailstore.feedback.service.AnalysisJobService;
 import com.retailstore.feedback.service.EvaluationService;
 import com.retailstore.feedback.service.FeedbackService;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -43,12 +46,20 @@ public class FeedbackController {
     }
 
     @GetMapping("/")
-    public String dashboard(@RequestParam(required = false) Long batch, Model model) {
+    public String dashboard(@RequestParam(required = false) Long batch,
+                            @RequestParam(required = false) String department,
+                            @RequestParam(required = false) String sentiment,
+                            @RequestParam(required = false) String category,
+                            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                            Model model) {
         UploadBatch current = feedbackService.getBatch(batch);
         if (analysisJobs.isBusy(current)) {
             return progressPage(current, "dashboard", model);
         }
-        model.addAttribute("summary", feedbackService.generateFeedbackSummary(current.getId()));
+        FeedbackFilter filter = FeedbackFilter.of(department, sentiment, category, from, to);
+        model.addAttribute("summary", feedbackService.generateFeedbackSummary(current.getId(), filter));
+        model.addAttribute("filter", filter);
         addBatchSelector(model, feedbackService.getBatch(current.getId()));
         return "dashboard";
     }
@@ -88,8 +99,13 @@ public class FeedbackController {
 
     @GetMapping("/getfeedback")
     @ResponseBody
-    public List<EnhancedFeedback> getFeedback(@RequestParam(required = false) Long batch) {
-        return feedbackService.getEnhancedFeedback(batch);
+    public List<EnhancedFeedback> getFeedback(@RequestParam(required = false) Long batch,
+                                              @RequestParam(required = false) String department,
+                                              @RequestParam(required = false) String sentiment,
+                                              @RequestParam(required = false) String category,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return feedbackService.getEnhancedFeedback(batch, FeedbackFilter.of(department, sentiment, category, from, to));
     }
 
     @GetMapping("/api/evaluation")

@@ -2,7 +2,7 @@
 
 AI-powered customer feedback analytics for retail stores, built with **Java 17, Spring Boot 3.5, Spring AI, Google Gemini and Stanford CoreNLP**.
 
-Upload customer reviews as CSV or text, in **English or Indonesian** (including informal Indonesian); each review gets a sentiment label, a problem category and a concrete action item written in the review's language. Results are stored in a database and shown on a dashboard with sentiment, category and department breakdowns, plus an evaluation page that measures how accurate each sentiment model is.
+Upload customer reviews as CSV or text, in **English or Indonesian** (including informal Indonesian); each review gets a sentiment label, a problem category and a concrete action item written in the review's language. Results are stored in a database and shown on a filterable dashboard with sentiment, category and department breakdowns and a weekly sentiment trend, plus an evaluation page that measures how accurate each sentiment model is.
 
 > Started as the final project of IBM's *Generative AI for Java and Spring Development* course and is being extended as a portfolio project. See [Origin and attribution](#origin-and-attribution).
 
@@ -23,6 +23,10 @@ Upload customer reviews as CSV or text, in **English or Indonesian** (including 
 CoreNLP stays in the pipeline as an offline baseline; the evaluation page shows both models side by side with confusion matrices and every review where a model disagrees with the label.
 
 ![Dashboard for an uploaded CSV batch](docs/dashboard.jpg)
+
+Filter by department, sentiment, category and date range; the charts, the weekly trend and the review table all follow the filter.
+
+![Weekly sentiment trend of the sample dataset](docs/trend.jpg)
 
 ### Indonesian reviews
 
@@ -102,12 +106,12 @@ See [.env.example](.env.example).
 
 | Method | Path | Returns |
 |---|---|---|
-| `GET` | `/?batch={id}` | Dashboard (HTML) |
+| `GET` | `/?batch={id}&department=&sentiment=&category=&from=&to=` | Dashboard (HTML); filters are optional, dates are `YYYY-MM-DD` |
 | `GET` | `/evaluation?batch={id}` | Sentiment accuracy, confusion matrices and disagreements (HTML) |
 | `GET`, `POST` | `/upload` | Upload form / upload a CSV or TXT file |
 | `POST` | `/batches/{id}/reanalyze` | Retry Gemini, in the background, for reviews without a result |
 | `GET` | `/api/batches/{id}/status` | Analysis progress: `analyzed`, `running`, `processedReviews`, `reviewCount`, `failedReviews` (JSON) |
-| `GET` | `/getfeedback?batch={id}` | All reviews with CoreNLP `sentiment`, Gemini `aiSentiment`, `category` and `actionableInsight` (JSON) |
+| `GET` | `/getfeedback?batch={id}` | Reviews with CoreNLP `sentiment`, Gemini `aiSentiment`, `category` and `actionableInsight` (JSON); accepts the same filters as the dashboard |
 | `GET` | `/api/evaluation?batch={id}` | The evaluation report (JSON) |
 | `GET` | `/api/batches` | All batches with review counts and analysis status (JSON) |
 
@@ -135,6 +139,7 @@ Example review from `/getfeedback`:
 - **Structured output instead of regex.** `ChatClient.call().entity(new ParameterizedTypeReference<List<AiReview>>() {})` adds a JSON schema to the prompt and maps the answer to records, and the request asks Gemini for `application/json`. Categories outside the fixed list are mapped to `Other`, because the model occasionally invents one.
 - **Multilingual by prompt, fixed categories.** The system prompt tells Gemini that reviews may be English or informal Indonesian, to report the language (ISO 639-1), to keep categories in English so charts stay comparable, and to write the insight in the review's language. The evaluation page drops CoreNLP for batches it can't analyse.
 - **Background analysis with progress.** Uploads return immediately; a single-thread worker sends the reviews to Gemini (one batch at a time, which also respects free-tier rate limits) and saves progress after every request. The progress page polls `/api/batches/{id}/status` and reloads when the batch is done. Repeated page loads don't queue the same batch twice, and an "analyzing" flag left behind by a crash is cleared on startup.
+- **Filters and trend from stored data.** Filtering and the weekly trend are computed from the stored results, so they cost no API calls. Sentiment filters and charts use Gemini's label, falling back to CoreNLP; the trend groups reviews by ISO week (Monday start) and fills empty weeks with zeros so the time axis is continuous; reviews without a valid date are left out of date filters and the trend.
 - **Analyse once, store the result.** Batches and Gemini results live in a database (H2 file by default, any JDBC URL via `DATABASE_URL`), so a batch costs API quota only the first time it is opened, also across restarts.
 - **Failures degrade, not crash.** If a request fails (quota, network), its reviews are marked `Uncategorized` with the reason, the dashboard shows how many are missing, and a "Retry with Gemini" button re-sends only those reviews.
 - **Upload validation.** The parser accepts CSV (any column order, optional columns, quoted commas, UTF-8 BOM) and the dataset's text format, and rejects files without comments, bad ids or more than 200 reviews with a message on the page.
@@ -145,11 +150,12 @@ Example review from `/getfeedback`:
 
 ## Tests
 
-`mvn test` runs 24 tests without network access (Gemini is mocked, the database is in-memory):
+`mvn test` runs 29 tests without network access (Gemini is mocked, the database is in-memory):
 
-- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; invalid uploads store nothing; unknown batches return 404.
+- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; dashboard and API filters return the right subset; invalid uploads store nothing; unknown batches return 404.
 - `FeedbackFileParserTest`: CSV variants, the raw text dataset, the CoreNLP output format and invalid files.
 - `EvaluationServiceTest`: five-to-three class mapping, accuracy and confusion matrix.
+- `FeedbackSummaryTest`: filter matching (department, displayed sentiment, category, inclusive date range, blank values) and the weekly trend (Monday grouping, empty weeks, undated reviews).
 - `GeminiFeedbackAnalyzerTest`: the prompt covers Indonesian reviews, the language field and every category.
 - `FeedbackServiceApplicationTests`: the Spring context starts.
 
@@ -160,7 +166,8 @@ Example review from `/getfeedback`:
 - [x] **Phase 2A:** CSV/TXT upload with validation, batches and AI results stored in a database, batch selector, retry for failed reviews
 - [x] **Phase 2C:** Indonesian reviews (labelled 30-review sample, language detection, insights in the review's language): Gemini 90%
 - [x] **Phase 2B:** background analysis with a live progress page and status endpoint
-- [ ] **Phase 2 (rest):** filters and trends, per-department executive summary
+- [x] **Phase 2D:** dashboard filters (department, sentiment, category, date range) and a weekly sentiment trend
+- [ ] **Phase 2E:** per-department executive summary
 - [ ] **Phase 3:** OpenAPI docs, Spring AI evaluators for insight quality, Docker Compose, GitHub Actions, live demo
 - [ ] **Phase 4:** "ask your feedback" chat (RAG), alerts on negative spikes
 

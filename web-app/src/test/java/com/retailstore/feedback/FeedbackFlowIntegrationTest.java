@@ -245,6 +245,26 @@ class FeedbackFlowIntegrationTest {
     }
 
     @Test
+    void dashboardAndApiApplyFilters() throws Exception {
+        Long sampleId = feedbackService.getBatch(null).getId();
+        feedbackService.getAnalyzedRecords(sampleId);
+
+        // The sample has 8 Returns reviews
+        mvc.perform(get("/").param("batch", sampleId.toString()).param("department", "Returns"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Sentiment trend per week")))
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*Showing <b>8</b> of <span>50</span> reviews.*")));
+
+        mvc.perform(get("/getfeedback").param("batch", sampleId.toString())
+                        .param("department", "Returns").param("from", "2025-05-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[*].department").value(org.hamcrest.Matchers.everyItem(
+                        org.hamcrest.Matchers.is("Returns"))));
+    }
+
+    @Test
     void unknownBatchReturns404() throws Exception {
         mvc.perform(get("/").param("batch", "999")).andExpect(status().isNotFound());
     }

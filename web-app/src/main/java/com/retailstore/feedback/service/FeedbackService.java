@@ -3,6 +3,7 @@ package com.retailstore.feedback.service;
 import com.retailstore.feedback.model.AiReview;
 import com.retailstore.feedback.model.EnhancedFeedback;
 import com.retailstore.feedback.model.FeedbackEntry;
+import com.retailstore.feedback.model.FeedbackFilter;
 import com.retailstore.feedback.model.FeedbackSummary;
 import com.retailstore.feedback.persistence.FeedbackRecord;
 import com.retailstore.feedback.persistence.FeedbackRecordRepository;
@@ -14,11 +15,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -31,6 +38,7 @@ public class FeedbackService {
 
     private static final Logger log = LoggerFactory.getLogger(FeedbackService.class);
     static final String UNCATEGORIZED = "Uncategorized";
+    private static final List<String> TREND_SENTIMENTS = List.of("POSITIVE", "NEUTRAL", "NEGATIVE");
 
     private final GeminiFeedbackAnalyzer geminiAnalyzer;
     private final UploadBatchRepository batchRepository;
@@ -162,13 +170,25 @@ public class FeedbackService {
      * Sentiment counts use Gemini's result, falling back to CoreNLP where Gemini has none.
      */
     public FeedbackSummary generateFeedbackSummary(Long batchId) {
-        List<EnhancedFeedback> allFeedback = getEnhancedFeedback(batchId);
+        return generateFeedbackSummary(batchId, FeedbackFilter.NONE);
+    }
+
+    /** Summary of the reviews of a batch that match the filter; dropdown options come from the whole batch. */
+    public FeedbackSummary generateFeedbackSummary(Long batchId, FeedbackFilter filter) {
+        List<EnhancedFeedback> batchFeedback = getEnhancedFeedback(batchId);
+        List<EnhancedFeedback> allFeedback = batchFeedback.stream().filter(filter::matches).toList();
+
         FeedbackSummary summary = new FeedbackSummary();
         summary.setTotalFeedback(allFeedback.size());
-        summary.setSentimentCounts(countBy(allFeedback,
-                f -> f.getAiSentiment() != null ? f.getAiSentiment() : orUnknown(f.getSentiment())));
+        summary.setUnfilteredTotal(batchFeedback.size());
+        summary.setSentimentCounts(countBy(allFeedback, f -> orUnknown(FeedbackFilter.displaySentiment(f))));
         summary.setCategoryCounts(countBy(allFeedback, f -> orUnknown(f.getCategory())));
         summary.setDepartmentCounts(countBy(allFeedback, f -> orUnknown(f.getDepartment())));
+
+        summary.setDepartments(distinct(batchFeedback, EnhancedFeedback::getDepartment));
+        summary.setSentiments(distinct(batchFeedback, FeedbackFilter::displaySentiment));
+        summary.setCategories(distinct(batchFeedback, EnhancedFeedback::getCategory));
+        addWeeklyTrend(summary, allFeedback);
 
         // Most recent = highest review ids
         summary.setRecentFeedback(allFeedback.stream()
@@ -176,6 +196,52 @@ public class FeedbackService {
                 .limit(5)
                 .collect(Collectors.toList()));
         return summary;
+    }
+
+    /** Reviews of a batch that match the filter. */
+    public List<EnhancedFeedback> getEnhancedFeedback(Long batchId, FeedbackFilter filter) {
+        return getEnhancedFeedback(batchId).stream().filter(filter::matches).toList();
+    }
+
+    /**
+     * Counts reviews per sentiment per week (weeks start on Monday). Weeks without reviews between the first
+     * and last week are included with zero counts so the chart's time axis is continuous.
+     */
+    static void addWeeklyTrend(FeedbackSummary summary, List<EnhancedFeedback> feedback) {
+        TreeMap<LocalDate, Map<String, Integer>> byWeek = new TreeMap<>();
+        for (EnhancedFeedback f : feedback) {
+            LocalDate date = FeedbackFilter.parseDate(f.getDate());
+            String sentiment = FeedbackFilter.displaySentiment(f);
+            if (date == null || sentiment == null) {
+                continue;
+            }
+            LocalDate week = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            byWeek.computeIfAbsent(week, w -> new HashMap<>()).merge(threeClass(sentiment), 1, Integer::sum);
+        }
+
+        List<String> weeks = new ArrayList<>();
+        Map<String, List<Integer>> series = new LinkedHashMap<>();
+        TREND_SENTIMENTS.forEach(s -> series.put(s, new ArrayList<>()));
+        if (!byWeek.isEmpty()) {
+            for (LocalDate week = byWeek.firstKey(); !week.isAfter(byWeek.lastKey()); week = week.plusWeeks(1)) {
+                weeks.add(week.toString());
+                Map<String, Integer> counts = byWeek.getOrDefault(week, Map.of());
+                TREND_SENTIMENTS.forEach(s -> series.get(s).add(counts.getOrDefault(s, 0)));
+            }
+        }
+        summary.setTrendWeeks(weeks);
+        summary.setTrendSeries(series);
+    }
+
+    /** VERY_POSITIVE / VERY_NEGATIVE count as POSITIVE / NEGATIVE in the trend. */
+    private static String threeClass(String sentiment) {
+        if (sentiment.endsWith("POSITIVE")) return "POSITIVE";
+        if (sentiment.endsWith("NEGATIVE")) return "NEGATIVE";
+        return "NEUTRAL";
+    }
+
+    private static List<String> distinct(List<EnhancedFeedback> feedback, Function<EnhancedFeedback, String> key) {
+        return feedback.stream().map(key).filter(v -> v != null && !v.isBlank()).distinct().sorted().toList();
     }
 
     private static Map<String, Integer> countBy(List<EnhancedFeedback> feedback, Function<EnhancedFeedback, String> key) {

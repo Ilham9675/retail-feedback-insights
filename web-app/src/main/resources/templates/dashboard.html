@@ -55,6 +55,52 @@
         </form>
     </div>
 
+    <!-- Filters -->
+    <form method="get" action="/" class="card card-body mb-4">
+        <input type="hidden" name="batch" th:value="${currentBatch.id}">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="f-department">Department</label>
+                <select id="f-department" name="department" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option th:each="d : ${summary.departments}" th:value="${d}" th:text="${d}"
+                            th:selected="${d == filter.department}">Returns</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="f-sentiment">Sentiment</label>
+                <select id="f-sentiment" name="sentiment" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option th:each="s : ${summary.sentiments}" th:value="${s}" th:text="${s}"
+                            th:selected="${s == filter.sentiment}">NEGATIVE</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="f-category">Category</label>
+                <select id="f-category" name="category" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option th:each="c : ${summary.categories}" th:value="${c}" th:text="${c}"
+                            th:selected="${c == filter.category}">Delivery</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="f-from">From</label>
+                <input id="f-from" type="date" name="from" class="form-control form-control-sm" th:value="${filter.from}">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="f-to">To</label>
+                <input id="f-to" type="date" name="to" class="form-control form-control-sm" th:value="${filter.to}">
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply</button>
+                <a class="btn btn-sm btn-outline-secondary flex-fill" th:href="@{/(batch=${currentBatch.id})}">Reset</a>
+            </div>
+        </div>
+        <div class="small text-muted mt-2" th:if="${filter.active}">
+            Showing <b th:text="${summary.totalFeedback}">12</b> of <span th:text="${summary.unfilteredTotal}">50</span> reviews
+        </div>
+    </form>
+
     <!-- Summary Section -->
     <div class="row mb-4">
         <div class="col-md-4">
@@ -87,6 +133,23 @@
                     <h5 class="card-title">Department Distribution</h5>
                     <div class="chart-container">
                         <canvas id="departmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly trend -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Sentiment trend per week</h5>
+                    <p th:if="${#lists.isEmpty(summary.trendWeeks)}" class="text-muted mb-0">
+                        No dated reviews to show a trend for.
+                    </p>
+                    <div th:unless="${#lists.isEmpty(summary.trendWeeks)}" style="height: 260px">
+                        <canvas id="trendChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -189,6 +252,11 @@
     const createSentimentChart = () => {
         const ctx = document.getElementById('sentimentChart').getContext('2d');
         const data = prepareChartData(summaryData.sentimentCounts);
+        // Same fixed colours as the trend chart; other labels keep the random colour
+        const sentimentColors = { POSITIVE: '#28a745', VERY_POSITIVE: '#1e7e34', NEUTRAL: '#6c757d',
+                                  NEGATIVE: '#dc3545', VERY_NEGATIVE: '#a71d2a' };
+        data.datasets[0].backgroundColor = data.labels.map((label, i) =>
+            sentimentColors[label] || data.datasets[0].backgroundColor[i]);
 
         new Chart(ctx, {
             type: 'pie',
@@ -237,6 +305,35 @@
     };
 
     // Create department chart
+    // Stacked weekly sentiment counts with fixed colours, so the trend reads the same in every batch
+    const createTrendChart = () => {
+        const canvas = document.getElementById('trendChart');
+        if (!canvas || !summaryData.trendWeeks || summaryData.trendWeeks.length === 0) {
+            return;
+        }
+        const colors = { POSITIVE: '#28a745', NEUTRAL: '#6c757d', NEGATIVE: '#dc3545' };
+        new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: summaryData.trendWeeks.map(week => 'Week of ' + week),
+                datasets: Object.entries(summaryData.trendSeries).map(([sentiment, counts]) => ({
+                    label: sentiment,
+                    data: counts,
+                    backgroundColor: colors[sentiment]
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    };
+
     const createDepartmentChart = () => {
         const ctx = document.getElementById('departmentChart').getContext('2d');
         const data = prepareChartData(summaryData.departmentCounts);
@@ -261,7 +358,10 @@
 
     // Fetch all feedback and update the table
     const fetchAllFeedback = () => {
-        fetch('/getfeedback?batch=' + currentBatchId)
+        // Same batch and filters as the page
+        const query = new URLSearchParams(window.location.search);
+        query.set('batch', currentBatchId);
+        fetch('/getfeedback?' + query.toString())
             .then(response => response.json())
             .then(data => {
                 const container = document.getElementById('allFeedbackContainer');
@@ -332,6 +432,7 @@
         createSentimentChart();
         createCategoryChart();
         createDepartmentChart();
+        createTrendChart();
         fetchAllFeedback();
 
         // Set up refresh button
