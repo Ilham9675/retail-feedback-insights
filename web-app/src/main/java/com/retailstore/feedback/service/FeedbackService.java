@@ -87,6 +87,9 @@ public class FeedbackService {
     private void analyze(UploadBatch batch, List<FeedbackRecord> all, List<FeedbackRecord> pending) {
         long start = System.currentTimeMillis();
         int calls = 0;
+        // Progress is saved after every request so the status endpoint can report it while this runs
+        batch.startAnalysis(pending.size());
+        batch = batchRepository.save(batch);
 
         for (int from = 0; from < pending.size(); from += batchSize) {
             List<FeedbackRecord> chunk = pending.subList(from, Math.min(from + batchSize, pending.size()));
@@ -109,9 +112,11 @@ public class FeedbackService {
             for (FeedbackRecord record : chunk) {
                 apply(record, resultsById.get(record.getReviewId()), failure);
             }
+            recordRepository.saveAll(chunk);
+            batch.recordProgress(batch.getProcessedReviews() + chunk.size());
+            batch = batchRepository.save(batch);
         }
 
-        recordRepository.saveAll(pending);
         int failed = (int) all.stream().filter(r -> r.getAiSentiment() == null).count();
         long elapsed = System.currentTimeMillis() - start;
         batch.markAnalyzed(calls, elapsed, failed);

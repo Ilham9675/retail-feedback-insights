@@ -1,5 +1,6 @@
 package com.retailstore.feedback.persistence;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -27,6 +28,12 @@ public class UploadBatch {
     private long processingMillis;
     private int failedReviews;
 
+    // Background analysis state; column defaults let existing databases add these columns
+    @Column(columnDefinition = "boolean default false")
+    private boolean analyzing;
+    @Column(columnDefinition = "integer default 0")
+    private int processedReviews;
+
     protected UploadBatch() {
     }
 
@@ -36,8 +43,24 @@ public class UploadBatch {
         this.createdAt = Instant.now();
     }
 
+    public void startAnalysis(int reviewsToProcess) {
+        this.analyzing = true;
+        this.processedReviews = reviewCount - reviewsToProcess;
+    }
+
+    public void recordProgress(int processedReviews) {
+        this.processedReviews = processedReviews;
+    }
+
+    /** Clears a stale "analyzing" flag, e.g. when the app stopped during an analysis. */
+    public void stopAnalysis() {
+        this.analyzing = false;
+    }
+
     public void markAnalyzed(int aiCalls, long processingMillis, int failedReviews) {
         this.analyzed = true;
+        this.analyzing = false;
+        this.processedReviews = reviewCount;
         this.aiCalls = aiCalls;
         this.processingMillis = processingMillis;
         this.failedReviews = failedReviews;
@@ -58,4 +81,11 @@ public class UploadBatch {
     public long getProcessingMillis() { return processingMillis; }
 
     public int getFailedReviews() { return failedReviews; }
+
+    public boolean isAnalyzing() { return analyzing; }
+
+    public int getProcessedReviews() { return processedReviews; }
+
+    /** True while results are missing or being (re)computed, so pages should show progress. */
+    public boolean isBusy() { return !analyzed || analyzing; }
 }

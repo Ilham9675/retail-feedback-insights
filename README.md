@@ -68,7 +68,7 @@ export GEMINI_API_KEY=your-key            # PowerShell: $env:GEMINI_API_KEY="you
 java -jar web-app/target/web-app-0.1.0-SNAPSHOT.jar
 ```
 
-Open <http://localhost:8080> for the dashboard, <http://localhost:8080/evaluation> for the model comparison and <http://localhost:8080/upload> to analyse your own reviews (sample CSVs: [English](web-app/src/main/resources/static/samples/sample_reviews.csv), [Indonesian](web-app/src/main/resources/static/samples/sample_reviews_id.csv)). The first time a batch is opened Gemini analyses it; the results are stored in `data/db/`, so later visits and restarts don't call the API again.
+Open <http://localhost:8080> for the dashboard, <http://localhost:8080/evaluation> for the model comparison and <http://localhost:8080/upload> to analyse your own reviews (sample CSVs: [English](web-app/src/main/resources/static/samples/sample_reviews.csv), [Indonesian](web-app/src/main/resources/static/samples/sample_reviews_id.csv)). Gemini starts analysing a batch right after the upload (or the first time a sample is opened) in a background worker; the page shows a live progress bar and opens the results when it is done. Results are stored in `data/db/`, so later visits and restarts don't call the API again.
 
 ### Upload format
 
@@ -105,12 +105,13 @@ See [.env.example](.env.example).
 | `GET` | `/?batch={id}` | Dashboard (HTML) |
 | `GET` | `/evaluation?batch={id}` | Sentiment accuracy, confusion matrices and disagreements (HTML) |
 | `GET`, `POST` | `/upload` | Upload form / upload a CSV or TXT file |
-| `POST` | `/batches/{id}/reanalyze` | Retry Gemini for reviews without a result |
+| `POST` | `/batches/{id}/reanalyze` | Retry Gemini, in the background, for reviews without a result |
+| `GET` | `/api/batches/{id}/status` | Analysis progress: `analyzed`, `running`, `processedReviews`, `reviewCount`, `failedReviews` (JSON) |
 | `GET` | `/getfeedback?batch={id}` | All reviews with CoreNLP `sentiment`, Gemini `aiSentiment`, `category` and `actionableInsight` (JSON) |
 | `GET` | `/api/evaluation?batch={id}` | The evaluation report (JSON) |
 | `GET` | `/api/batches` | All batches with review counts and analysis status (JSON) |
 
-`batch` is optional everywhere and defaults to the most recent batch.
+`batch` is optional everywhere and defaults to the most recent batch. The HTML pages show a progress page while a batch is being analysed; the JSON endpoints wait for the analysis to finish instead.
 
 Example review from `/getfeedback`:
 
@@ -133,6 +134,7 @@ Example review from `/getfeedback`:
 - **Batching instead of one call per review.** The course version made 50 sequential HTTP calls; with a free-tier key that took ~15 minutes and some calls timed out. Sending 25 reviews per request cut it to 2 calls and ~41 seconds.
 - **Structured output instead of regex.** `ChatClient.call().entity(new ParameterizedTypeReference<List<AiReview>>() {})` adds a JSON schema to the prompt and maps the answer to records, and the request asks Gemini for `application/json`. Categories outside the fixed list are mapped to `Other`, because the model occasionally invents one.
 - **Multilingual by prompt, fixed categories.** The system prompt tells Gemini that reviews may be English or informal Indonesian, to report the language (ISO 639-1), to keep categories in English so charts stay comparable, and to write the insight in the review's language. The evaluation page drops CoreNLP for batches it can't analyse.
+- **Background analysis with progress.** Uploads return immediately; a single-thread worker sends the reviews to Gemini (one batch at a time, which also respects free-tier rate limits) and saves progress after every request. The progress page polls `/api/batches/{id}/status` and reloads when the batch is done. Repeated page loads don't queue the same batch twice, and an "analyzing" flag left behind by a crash is cleared on startup.
 - **Analyse once, store the result.** Batches and Gemini results live in a database (H2 file by default, any JDBC URL via `DATABASE_URL`), so a batch costs API quota only the first time it is opened, also across restarts.
 - **Failures degrade, not crash.** If a request fails (quota, network), its reviews are marked `Uncategorized` with the reason, the dashboard shows how many are missing, and a "Retry with Gemini" button re-sends only those reviews.
 - **Upload validation.** The parser accepts CSV (any column order, optional columns, quoted commas, UTF-8 BOM) and the dataset's text format, and rejects files without comments, bad ids or more than 200 reviews with a message on the page.
@@ -143,9 +145,9 @@ Example review from `/getfeedback`:
 
 ## Tests
 
-`mvn test` runs 21 tests without network access (Gemini is mocked, the database is in-memory):
+`mvn test` runs 24 tests without network access (Gemini is mocked, the database is in-memory):
 
-- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch; invalid uploads store nothing; unknown batches return 404.
+- `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; invalid uploads store nothing; unknown batches return 404.
 - `FeedbackFileParserTest`: CSV variants, the raw text dataset, the CoreNLP output format and invalid files.
 - `EvaluationServiceTest`: five-to-three class mapping, accuracy and confusion matrix.
 - `GeminiFeedbackAnalyzerTest`: the prompt covers Indonesian reviews, the language field and every category.
@@ -157,7 +159,8 @@ Example review from `/getfeedback`:
 - [x] **Phase 1:** Spring AI `ChatClient` with structured JSON output, batched prompts (15 min → 41 s), evaluation page comparing CoreNLP vs Gemini against the labels (46% → 92%)
 - [x] **Phase 2A:** CSV/TXT upload with validation, batches and AI results stored in a database, batch selector, retry for failed reviews
 - [x] **Phase 2C:** Indonesian reviews (labelled 30-review sample, language detection, insights in the review's language): Gemini 90%
-- [ ] **Phase 2 (rest):** async processing with progress, filters and trends, per-department executive summary
+- [x] **Phase 2B:** background analysis with a live progress page and status endpoint
+- [ ] **Phase 2 (rest):** filters and trends, per-department executive summary
 - [ ] **Phase 3:** OpenAPI docs, Spring AI evaluators for insight quality, Docker Compose, GitHub Actions, live demo
 - [ ] **Phase 4:** "ask your feedback" chat (RAG), alerts on negative spikes
 

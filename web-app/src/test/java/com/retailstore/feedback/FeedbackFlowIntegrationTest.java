@@ -7,6 +7,7 @@ import com.retailstore.feedback.model.FeedbackEntry;
 import com.retailstore.feedback.persistence.FeedbackRecord;
 import com.retailstore.feedback.persistence.UploadBatch;
 import com.retailstore.feedback.persistence.UploadBatchRepository;
+import com.retailstore.feedback.service.AnalysisJobService;
 import com.retailstore.feedback.service.EvaluationService;
 import com.retailstore.feedback.service.FeedbackService;
 import com.retailstore.feedback.service.GeminiFeedbackAnalyzer;
@@ -33,6 +34,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -64,6 +67,9 @@ class FeedbackFlowIntegrationTest {
 
     @Autowired
     private SampleDataLoader sampleDataLoader;
+
+    @Autowired
+    private AnalysisJobService analysisJobs;
 
     @BeforeEach
     void geminiCallsEverythingNegative() {
@@ -165,11 +171,64 @@ class FeedbackFlowIntegrationTest {
         assertThat(latest.getName()).isEqualTo("reviews.csv");
         assertThat(latest.getReviewCount()).isEqualTo(2);
 
+        // The upload starts the analysis in the background; the dashboard opens once it is done
+        waitUntilAnalyzed(latest.getId());
         mvc.perform(get("/").param("batch", latest.getId().toString()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("reviews.csv")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Recent Feedback")));
         // Only the two uploaded reviews were sent, not the sample
         verify(analyzer, times(1)).analyze(anyList());
+    }
+
+    @Test
+    void unanalysedBatchShowsProgressPageAndFinishesInTheBackground() throws Exception {
+        Long sampleId = feedbackService.getBatch(null).getId();
+
+        mvc.perform(get("/").param("batch", sampleId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Analysing")));
+
+        waitUntilAnalyzed(sampleId);
+        mvc.perform(get("/api/batches/{id}/status", sampleId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analyzed").value(true))
+                .andExpect(jsonPath("$.processedReviews").value(50))
+                .andExpect(jsonPath("$.reviewCount").value(50));
+        verify(analyzer, times(2)).analyze(anyList());
+    }
+
+    @Test
+    void retryRunsInTheBackgroundForFailedReviewsOnly() throws Exception {
+        doThrow(new RuntimeException("quota exceeded")).when(analyzer).analyze(anyList());
+        Long sampleId = feedbackService.getBatch(null).getId();
+        feedbackService.getAnalyzedRecords(sampleId);
+        assertThat(feedbackService.getBatch(sampleId).getFailedReviews()).isEqualTo(50);
+
+        geminiCallsEverythingNegative();
+        mvc.perform(post("/batches/{id}/reanalyze", sampleId))
+                .andExpect(status().is3xxRedirection());
+
+        waitUntilAnalyzed(sampleId);
+        assertThat(feedbackService.getBatch(sampleId).getFailedReviews()).isZero();
+    }
+
+    @Test
+    void staleAnalyzingFlagIsClearedOnStartup() throws Exception {
+        UploadBatch batch = feedbackService.getBatch(null);
+        batch.startAnalysis(batch.getReviewCount());
+        batchRepository.save(batch);
+
+        analysisJobs.run(null);
+
+        assertThat(feedbackService.getBatch(batch.getId()).isAnalyzing()).isFalse();
+    }
+
+    private void waitUntilAnalyzed(Long batchId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 10_000;
+        while (analysisJobs.isBusy(feedbackService.getBatch(batchId))) {
+            assertThat(System.currentTimeMillis()).as("analysis finished in time").isLessThan(deadline);
+            Thread.sleep(50);
+        }
     }
 
     @Test

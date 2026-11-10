@@ -21,7 +21,7 @@
                     <h4 class="card-title">Upload customer reviews</h4>
                     <p class="text-muted">
                         Upload a <b>.csv</b> or <b>.txt</b> file with up to <span th:text="${maxReviews}">200</span> reviews (max 1 MB).
-                        Gemini analyses the reviews when you open the dashboard, about 25 reviews per request (usually a few seconds each).
+                        Gemini starts analysing right after the upload, about 25 reviews per request, and the dashboard shows the progress.
                     </p>
 
                     <div th:if="${error}" class="alert alert-danger" th:text="${error}">Error</div>

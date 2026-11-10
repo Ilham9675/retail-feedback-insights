@@ -3,6 +3,7 @@ package com.retailstore.feedback.controller;
 import com.retailstore.feedback.ingest.FeedbackImportService;
 import com.retailstore.feedback.ingest.InvalidFeedbackFileException;
 import com.retailstore.feedback.persistence.UploadBatch;
+import com.retailstore.feedback.service.AnalysisJobService;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -23,11 +24,14 @@ import java.util.Locale;
 public class UploadController {
 
     private final FeedbackImportService importService;
+    private final AnalysisJobService analysisJobs;
     private final int maxReviews;
 
     public UploadController(FeedbackImportService importService,
+                            AnalysisJobService analysisJobs,
                             @Value("${feedback.upload.max-reviews:200}") int maxReviews) {
         this.importService = importService;
+        this.analysisJobs = analysisJobs;
         this.maxReviews = maxReviews;
     }
 
@@ -54,6 +58,8 @@ public class UploadController {
 
         try {
             UploadBatch batch = importService.importFile(name, new String(file.getBytes(), StandardCharsets.UTF_8));
+            // Start Gemini right away; the dashboard shows progress until it is done
+            analysisJobs.startAnalysis(batch.getId());
             return "redirect:/?batch=" + batch.getId();
         } catch (InvalidFeedbackFileException e) {
             model.addAttribute("error", e.getMessage());

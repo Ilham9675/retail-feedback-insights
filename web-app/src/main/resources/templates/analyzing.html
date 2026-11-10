@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysing - Customer Feedback Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        .card { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .progress { height: 1.5rem; }
+    </style>
+</head>
+<body>
+<nav th:replace="~{fragments/nav :: navbar(${page})}"></nav>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4 class="card-title">Analysing <span th:text="${currentBatch.name}">reviews.csv</span></h4>
+                    <p class="text-muted">
+                        Gemini is reading the reviews in the background, about 25 per request.
+                        This page opens the results automatically when it is done.
+                    </p>
+
+                    <div class="progress mb-2" role="progressbar" aria-label="Analysis progress"
+                         aria-valuemin="0" th:attr="aria-valuemax=${currentBatch.reviewCount}">
+                        <div id="bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>
+                    </div>
+                    <p id="label" class="small text-muted mb-0">
+                        <span th:text="${currentBatch.processedReviews}">0</span> of
+                        <span th:text="${currentBatch.reviewCount}">10</span> reviews analysed
+                    </p>
+
+                    <div id="stopped" class="alert alert-warning mt-3 d-none">
+                        The analysis stopped before it finished.
+                        <a href="" class="alert-link">Try again</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const batchId = /*[[${currentBatch.id}]]*/ 1;
+    const bar = document.getElementById('bar');
+    const label = document.getElementById('label');
+
+    const poll = () => {
+        fetch('/api/batches/' + batchId + '/status')
+            .then(response => response.json())
+            .then(status => {
+                const percent = status.reviewCount === 0 ? 100
+                    : Math.round(100 * status.processedReviews / status.reviewCount);
+                bar.style.width = percent + '%';
+                bar.textContent = percent + '%';
+                label.textContent = status.processedReviews + ' of ' + status.reviewCount + ' reviews analysed';
+
+                if (status.analyzed) {
+                    window.location.reload();
+                } else if (!status.running) {
+                    document.getElementById('stopped').classList.remove('d-none');
+                    bar.classList.remove('progress-bar-animated');
+                } else {
+                    setTimeout(poll, 1500);
+                }
+            })
+            .catch(() => setTimeout(poll, 3000));
+    };
+    poll();
+</script>
+</body>
+</html>

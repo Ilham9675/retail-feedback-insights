@@ -12,4 +12,6 @@ public interface UploadBatchRepository extends JpaRepository<UploadBatch, Long> 
     Optional<UploadBatch> findFirstByOrderByCreatedAtDescIdDesc();
 
     boolean existsByName(String name);
+
+    List<UploadBatch> findByAnalyzingTrue();
 }
