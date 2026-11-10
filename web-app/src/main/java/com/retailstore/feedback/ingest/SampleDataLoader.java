@@ -1,5 +1,9 @@
 package com.retailstore.feedback.ingest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.retailstore.feedback.persistence.FeedbackRecord;
+import com.retailstore.feedback.persistence.FeedbackRecordRepository;
+import com.retailstore.feedback.persistence.UploadBatch;
 import com.retailstore.feedback.persistence.UploadBatchRepository;
 
 import org.slf4j.Logger;
@@ -26,6 +30,8 @@ import java.util.stream.Collectors;
  *   <li>the 50-review English sample: CoreNLP results from the sentiment-core output plus the labels of the raw dataset</li>
  * </ul>
  * The English sample is imported last so it is the default batch on a fresh database.
+ * When {@code feedback.sample.precomputed} is on, stored Gemini results from a real run are applied right after the import,
+ * so the samples are analysed without an API key (used by the public demo).
  */
 @Component
 public class SampleDataLoader implements ApplicationRunner {
@@ -35,25 +41,35 @@ public class SampleDataLoader implements ApplicationRunner {
     private final FeedbackFileParser parser;
     private final FeedbackImportService importService;
     private final UploadBatchRepository batchRepository;
+    private final FeedbackRecordRepository recordRepository;
+    private final ObjectMapper objectMapper;
     private final boolean enabled;
+    private final boolean precomputed;
     private final String coreNlpOutputFile;
     private final String labelsFile;
 
     public SampleDataLoader(FeedbackFileParser parser,
                             FeedbackImportService importService,
                             UploadBatchRepository batchRepository,
+                            FeedbackRecordRepository recordRepository,
+                            ObjectMapper objectMapper,
                             @Value("${feedback.sample.enabled:true}") boolean enabled,
+                            @Value("${feedback.sample.precomputed:true}") boolean precomputed,
                             @Value("${feedback.input-file:data/sentiment_feedback_output.txt}") String coreNlpOutputFile,
                             @Value("${feedback.labels-file:data/store_feedback.txt}") String labelsFile) {
         this.parser = parser;
         this.importService = importService;
         this.batchRepository = batchRepository;
+        this.recordRepository = recordRepository;
+        this.objectMapper = objectMapper;
         this.enabled = enabled;
+        this.precomputed = precomputed;
         this.coreNlpOutputFile = coreNlpOutputFile;
         this.labelsFile = labelsFile;
     }
 
     static final String INDONESIAN_SAMPLE = "static/samples/sample_reviews_id.csv";
+    static final String PRECOMPUTED_RESULTS = "demo/precomputed-results.json";
 
     @Override
     public void run(ApplicationArguments args) throws IOException {
@@ -73,7 +89,7 @@ public class SampleDataLoader implements ApplicationRunner {
                 resource.getContentAsString(StandardCharsets.UTF_8));
         String name = "Indonesian sample (" + reviews.size() + " reviews)";
         if (!batchRepository.existsByName(name)) {
-            importService.importReviews(name, reviews);
+            applyPrecomputed(importService.importReviews(name, reviews));
             log.info("Imported Indonesian sample with {} reviews", reviews.size());
         }
     }
@@ -104,8 +120,47 @@ public class SampleDataLoader implements ApplicationRunner {
 
         String name = "Sample dataset (" + reviews.size() + " reviews)";
         if (!batchRepository.existsByName(name)) {
-            importService.importReviews(name, reviews);
+            applyPrecomputed(importService.importReviews(name, reviews));
             log.info("Imported sample dataset with {} reviews", reviews.size());
         }
+    }
+
+    /** Copies the stored Gemini results of a sample onto the freshly imported batch, if there are any. */
+    private void applyPrecomputed(UploadBatch batch) throws IOException {
+        ClassPathResource resource = new ClassPathResource(PRECOMPUTED_RESULTS);
+        if (!precomputed || !resource.exists()) {
+            return;
+        }
+        PrecomputedResults results = objectMapper.readValue(resource.getInputStream(), PrecomputedResults.class);
+        PrecomputedResults.Batch stored = results.batches().stream()
+                .filter(b -> b.name().equals(batch.getName()))
+                .findFirst().orElse(null);
+        if (stored == null) {
+            return;
+        }
+
+        Map<Integer, PrecomputedResults.Review> byId = stored.results().stream()
+                .collect(Collectors.toMap(PrecomputedResults.Review::reviewId, Function.identity(), (a, b) -> a));
+        List<FeedbackRecord> records = recordRepository.findByBatchIdOrderByReviewId(batch.getId());
+        int missing = 0;
+        for (FeedbackRecord record : records) {
+            PrecomputedResults.Review review = byId.get(record.getReviewId());
+            if (review == null) {
+                missing++;
+                continue;
+            }
+            record.applyAnalysis(review.language(), review.aiSentiment(), review.category(), review.actionableInsight());
+        }
+        recordRepository.saveAll(records);
+
+        // Only mark the batch analysed when every review has a result; otherwise Gemini fills the gaps as usual
+        if (missing == 0) {
+            batch.markAnalyzed(stored.aiCalls(), stored.processingMillis(), 0);
+            if (stored.summary() != null && !stored.summary().isNull()) {
+                batch.storeSummary(objectMapper.writeValueAsString(stored.summary()));
+            }
+            batchRepository.save(batch);
+        }
+        log.info("Applied precomputed Gemini results ({} on {}) to '{}'", results.generatedBy(), results.generatedOn(), batch.getName());
     }
 }

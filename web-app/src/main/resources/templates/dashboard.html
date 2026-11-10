@@ -37,6 +37,7 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar('dashboard')}"></nav>
+<div th:replace="~{fragments/nav :: demoBanner}"></div>
 
 <div class="container">
     <!-- Batch status -->
@@ -48,7 +49,7 @@
                 in <span th:text="${#numbers.formatDecimal(currentBatch.processingMillis / 1000.0, 1, 1)}">40.0</span> s
             </small>
         </div>
-        <form th:if="${currentBatch.failedReviews > 0}" method="post"
+        <form th:if="${currentBatch.failedReviews > 0 and !demoMode}" method="post"
               th:action="@{/batches/{id}/reanalyze(id=${currentBatch.id})}" class="d-flex align-items-center gap-2">
             <span class="text-danger small"><span th:text="${currentBatch.failedReviews}">3</span> review(s) have no AI result.</span>
             <button type="submit" class="btn btn-sm btn-outline-danger">Retry with Gemini</button>

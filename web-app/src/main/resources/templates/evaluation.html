@@ -14,6 +14,7 @@
 </head>
 <body>
 <nav th:replace="~{fragments/nav :: navbar('evaluation')}"></nav>
+<div th:replace="~{fragments/nav :: demoBanner}"></div>
 
 <div class="container" th:with="hasCoreNlp=${#lists.size(report.models) > 1}">
     <h4 class="mb-1">Sentiment accuracy against dataset labels: <span th:text="${report.batchName}">Sample</span></h4>

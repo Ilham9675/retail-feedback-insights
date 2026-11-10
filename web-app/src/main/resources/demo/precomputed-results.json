@@ -1,0 +1,821 @@
+{
+ "generatedBy": "gemini-flash-lite-latest",
+ "generatedOn": "2026-11-10",
+ "batches": [
+  {
+   "name": "Sample dataset (50 reviews)",
+   "aiCalls": 2,
+   "processingMillis": 8479,
+   "results": [
+    {
+     "reviewId": 1,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Maintain current staff training protocols and regular restroom cleaning schedules."
+    },
+    {
+     "reviewId": 2,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Retrain staff on customer engagement and lower the store music volume."
+    },
+    {
+     "reviewId": 3,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Continue quality control measures with suppliers to maintain high standards."
+    },
+    {
+     "reviewId": 4,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Improve directional signage to help customers navigate the new layout more efficiently."
+    },
+    {
+     "reviewId": 5,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Price/Value",
+     "actionableInsight": "Conduct competitor pricing analysis to ensure better market competitiveness."
+    },
+    {
+     "reviewId": 6,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Increase floor staff during peak hours to reduce customer wait times."
+    },
+    {
+     "reviewId": 7,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Review parking availability and consider parking management solutions."
+    },
+    {
+     "reviewId": 8,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Customer Service",
+     "actionableInsight": "Reduce the in-store background music volume to improve the shopping environment."
+    },
+    {
+     "reviewId": 9,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Website/App",
+     "actionableInsight": "Continue updating in-app product location features to maintain high usability."
+    },
+    {
+     "reviewId": 10,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Delivery",
+     "actionableInsight": "Partner with shipping providers to improve packaging and handling procedures."
+    },
+    {
+     "reviewId": 11,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Preserve the current store layout strategy for optimal product discovery."
+    },
+    {
+     "reviewId": 12,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Schedule more cashiers during peak hours to manage crowd flow and reduce checkout lines."
+    },
+    {
+     "reviewId": 13,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Acknowledge staff for quick problem resolution and continue seasonal decor updates."
+    },
+    {
+     "reviewId": 14,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Maintain current maintenance schedules for store layout and restrooms."
+    },
+    {
+     "reviewId": 15,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Inventory/Stock",
+     "actionableInsight": "Maintain current inventory levels and supplier relationships to sustain product variety."
+    },
+    {
+     "reviewId": 16,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Price/Value",
+     "actionableInsight": "Ensure pricing consistency between online platforms and physical stores."
+    },
+    {
+     "reviewId": 17,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Perform regular maintenance checks on self-checkout machines to keep them fully operational."
+    },
+    {
+     "reviewId": 18,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Website/App",
+     "actionableInsight": "Continue monitoring website performance and user interface design."
+    },
+    {
+     "reviewId": 19,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Website/App",
+     "actionableInsight": "Investigate website stability during checkout and upgrade server capacity."
+    },
+    {
+     "reviewId": 20,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Ensure self-checkout machines remain well-maintained and fully functional."
+    },
+    {
+     "reviewId": 21,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Price/Value",
+     "actionableInsight": "Promote the store app features to more shoppers to enhance navigation."
+    },
+    {
+     "reviewId": 22,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Inventory/Stock",
+     "actionableInsight": "Improve inventory tracking to prevent out-of-stock items and optimize store layout paths."
+    },
+    {
+     "reviewId": 23,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Identify what drove this positive experience and replicate it across shifts."
+    },
+    {
+     "reviewId": 24,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Implement daily closing and opening recovery checklists to keep the store organized."
+    },
+    {
+     "reviewId": 25,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Other",
+     "actionableInsight": "Evaluate parking lot capacity and signage to assist customers."
+    },
+    {
+     "reviewId": 26,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Maintain current staff training and store standards to sustain high customer satisfaction."
+    },
+    {
+     "reviewId": 27,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Website/App",
+     "actionableInsight": "Continue updating seasonal decorations and monitor website usability regularly."
+    },
+    {
+     "reviewId": 28,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Lower the in-store background music volume to improve the overall shopping environment."
+    },
+    {
+     "reviewId": 29,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Review and loosen store return policy guidelines to improve customer retention."
+    },
+    {
+     "reviewId": 30,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Recognize and reward checkout staff for providing friendly and helpful service."
+    },
+    {
+     "reviewId": 31,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Audit product quality standards and reevaluate pricing strategies for low-tier items."
+    },
+    {
+     "reviewId": 32,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Maintain current cleaning schedules for restrooms and store floor maintenance."
+    },
+    {
+     "reviewId": 33,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Implement crowd management strategies during peak shopping hours to improve comfort."
+    },
+    {
+     "reviewId": 34,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Website/App",
+     "actionableInsight": "Keep website navigation optimized and ensure continuous system uptime."
+    },
+    {
+     "reviewId": 35,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Provide additional customer engagement training for staff on the sales floor."
+    },
+    {
+     "reviewId": 36,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Website/App",
+     "actionableInsight": "Promote the store app features to more shoppers to enhance in-store navigation."
+    },
+    {
+     "reviewId": 37,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Improve parking lot signage and consider dedicating staff to parking assistance during busy times."
+    },
+    {
+     "reviewId": 38,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Inventory/Stock",
+     "actionableInsight": "Maintain the current product variety and seasonal visual merchandising."
+    },
+    {
+     "reviewId": 39,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Optimize department layouts to reduce walking distance and ensure adequate floor staffing."
+    },
+    {
+     "reviewId": 40,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Document successful elements of the new store design for future store rollouts."
+    },
+    {
+     "reviewId": 41,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Other",
+     "actionableInsight": "Continue performing regular maintenance checks on all self-checkout machines."
+    },
+    {
+     "reviewId": 42,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Investigate product quality issues and reduce store music volume to enhance comfort."
+    },
+    {
+     "reviewId": 43,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Maintain high product quality standards and continue rigorous restroom cleaning protocols."
+    },
+    {
+     "reviewId": 44,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Inventory/Stock",
+     "actionableInsight": "Maintain current inventory levels and appealing seasonal displays."
+    },
+    {
+     "reviewId": 45,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Inventory/Stock",
+     "actionableInsight": "Improve inventory tracking and restocking frequency to prevent out-of-stock items."
+    },
+    {
+     "reviewId": 46,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Monitor store occupancy levels and manage traffic flow during peak hours."
+    },
+    {
+     "reviewId": 47,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Other",
+     "actionableInsight": "Ensure current checkout efficiency and equipment maintenance routines are sustained."
+    },
+    {
+     "reviewId": 48,
+     "language": null,
+     "aiSentiment": "NEGATIVE",
+     "category": "Website/App",
+     "actionableInsight": "Fix stability issues on the website checkout page immediately to prevent cart abandonment."
+    },
+    {
+     "reviewId": 49,
+     "language": null,
+     "aiSentiment": "POSITIVE",
+     "category": "Price/Value",
+     "actionableInsight": "Maintain competitive pricing strategies that align with current product quality."
+    },
+    {
+     "reviewId": 50,
+     "language": null,
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Improve parking lot lighting and signage to make spaces easier for customers to find."
+    }
+   ],
+   "summary": {
+    "overview": "Customer reviews show a mix of positive and negative feedback across various departments. While many customers appreciate the store design, staff helpfulness, and app functionality, others highlight issues such as long wait times, crowded stores, and technical problems with online shopping.",
+    "departments": [
+     {
+      "department": "Clothing",
+      "summary": "Customers experience frustration with overcrowding, long wait times for assistance, and a lack of cashiers during peak hours.",
+      "topIssues": [
+       "Too few cashiers during peak hours",
+       "Store was very crowded",
+       "Long wait time for assistance"
+      ],
+      "priorityActions": [
+       "Increase cashier presence during peak hours",
+       "Manage store capacity and customer flow"
+      ]
+     },
+     {
+      "department": "Online Shopping",
+      "summary": "Shoppers face significant technical hurdles with the website crashing during checkout alongside concerns regarding delivery and product quality.",
+      "topIssues": [
+       "Website crashed during checkout",
+       "Delivery arrived damaged",
+       "Poor quality products for the price"
+      ],
+      "priorityActions": [
+       "Fix website stability issues during checkout",
+       "Improve packaging and delivery handling",
+       "Review product quality standards"
+      ]
+     },
+     {
+      "department": "Store Environment",
+      "summary": "Customers note challenges with out-of-stock items and navigating the store to find products.",
+      "topIssues": [
+       "Product was out of stock",
+       "Had to travel across the store multiple times to find items"
+      ],
+      "priorityActions": [
+       "Improve inventory tracking to prevent out-of-stock items",
+       "Enhance store signage and product placement visibility"
+      ]
+     },
+     {
+      "department": "Customer Service",
+      "summary": "Experiences vary, but some customers report uninterested staff, loud music, and a messy store environment.",
+      "topIssues": [
+       "Staff seemed uninterested in helping",
+       "Music playing in the store was too loud",
+       "Store was messy and disorganized"
+      ],
+      "priorityActions": [
+       "Provide customer service training for staff",
+       "Lower store music volume",
+       "Maintain cleanliness and organization on the sales floor"
+      ]
+     },
+     {
+      "department": "Electronics",
+      "summary": "While some enjoy the store experience and website, others are deterred by prices being higher than advertised online.",
+      "topIssues": [
+       "Prices were higher than advertised online"
+      ],
+      "priorityActions": [
+       "Ensure price consistency between online and in-store channels"
+      ]
+     },
+     {
+      "department": "Home Goods",
+      "summary": "Customers generally have a smooth experience using the app and store layout, though website stability remains a concern.",
+      "topIssues": [
+       "Website crashed during checkout"
+      ],
+      "priorityActions": [
+       "Investigate and resolve website checkout crashes"
+      ]
+     },
+     {
+      "department": "Returns",
+      "summary": "Returns are generally handled well with helpful staff and quick checkout, though some face restrictive policies and parking difficulties.",
+      "topIssues": [
+       "Restrictive return policy",
+       "Difficult to find parking",
+       "Long wait for assistance during crowded times"
+      ],
+      "priorityActions": [
+       "Review and relax return policies",
+       "Improve parking signage or availability solutions"
+      ]
+     },
+     {
+      "department": "Grocery",
+      "summary": "Grocery customers appreciate the clean restrooms, website navigation, and store layout, despite occasional crowding and unengaged staff.",
+      "topIssues": [
+       "Store was very crowded",
+       "Staff seemed uninterested in helping"
+      ],
+      "priorityActions": [
+       "Engage staff in proactive customer assistance",
+       "Monitor store traffic during peak grocery hours"
+      ]
+     },
+     {
+      "department": "Checkout",
+      "summary": "Shoppers report mixed experiences, noting crowded conditions and poor product quality despite helpful staff and functioning self-checkouts.",
+      "topIssues": [
+       "Store was very crowded",
+       "Poor quality products for the price",
+       "Music playing in the store was too loud"
+      ],
+      "priorityActions": [
+       "Manage store congestion near checkout areas",
+       "Adjust store music volume"
+      ]
+     },
+     {
+      "department": "Product Selection",
+      "summary": "Customers find the selection and app helpful, though overcrowding and loud music detract from the visit.",
+      "topIssues": [
+       "Store was very crowded",
+       "Music playing in the store was too loud"
+      ],
+      "priorityActions": [
+       "Control store occupancy during busy periods",
+       "Lower background music volume"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "Indonesian sample (30 reviews)",
+   "aiCalls": 2,
+   "processingMillis": 6253,
+   "results": [
+    {
+     "reviewId": 1,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Pertahankan keramahan kasir dan pertahankan kecepatan layanan antrean."
+    },
+    {
+     "reviewId": 2,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Tingkatkan pengecekan tanggal kedaluwarsa produk secara berkala sebelum dijual."
+    },
+    {
+     "reviewId": 3,
+     "language": "id",
+     "aiSentiment": "NEUTRAL",
+     "category": "Price/Value",
+     "actionableInsight": "Tinjau kembali strategi penetapan harga agar lebih kompetitif dibanding toko lain."
+    },
+    {
+     "reviewId": 4,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Delivery",
+     "actionableInsight": "Evaluasi kinerja mitra kurir untuk mencegah keterlambatan dan kerusakan paket."
+    },
+    {
+     "reviewId": 5,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Berikan apresiasi kepada pegawai atas pelayanan informatif dan kesabarannya."
+    },
+    {
+     "reviewId": 6,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Tambahkan staf di bagian layanan pelanggan untuk mengurangi waktu tunggu."
+    },
+    {
+     "reviewId": 7,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Pertahankan kelengkapan dan kualitas produk alat dapur yang dijual."
+    },
+    {
+     "reviewId": 8,
+     "language": "id",
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Sesuaikan volume musik toko agar tidak terlalu kencang dan tetap nyaman."
+    },
+    {
+     "reviewId": 9,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Pertahankan efisiensi proses retur barang yang cepat dan tidak mempersulit."
+    },
+    {
+     "reviewId": 10,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Website/App",
+     "actionableInsight": "Perbaiki bug pada aplikasi yang sering melakukan logout sendiri saat pembayaran."
+    },
+    {
+     "reviewId": 11,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Pertahankan kualitas kesegaran sayuran yang dijual kepada pelanggan."
+    },
+    {
+     "reviewId": 12,
+     "language": "id",
+     "aiSentiment": "NEUTRAL",
+     "category": "Customer Service",
+     "actionableInsight": "Pastikan jumlah kasir memadai pada jam sibuk untuk menjaga kecepatan antrean."
+    },
+    {
+     "reviewId": 13,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Delivery",
+     "actionableInsight": "Pertahankan kecepatan pengiriman dan keakuratan barang sesuai foto."
+    },
+    {
+     "reviewId": 14,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Price/Value",
+     "actionableInsight": "Sinkronkan harga promosi di website dengan harga yang tertera di toko fisik."
+    },
+    {
+     "reviewId": 15,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Product Quality",
+     "actionableInsight": "Pertahankan standar kualitas bahan pakaian dan kesesuaian ukuran."
+    },
+    {
+     "reviewId": 16,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Optimalkan pengelolaan area parkir atau tambah petugas saat akhir pekan."
+    },
+    {
+     "reviewId": 17,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Beri penghargaan kepada staf CS yang responsif dan solutif."
+    },
+    {
+     "reviewId": 18,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Inventory/Stock",
+     "actionableInsight": "Tingkatkan manajemen stok barang agar produk yang sering dicari tidak habis."
+    },
+    {
+     "reviewId": 19,
+     "language": "id",
+     "aiSentiment": "NEUTRAL",
+     "category": "Website/App",
+     "actionableInsight": "Tambahkan fitur baru atau tingkatkan antarmuka agar aplikasi lebih menarik."
+    },
+    {
+     "reviewId": 20,
+     "language": "id",
+     "aiSentiment": "NEUTRAL",
+     "category": "Inventory/Stock",
+     "actionableInsight": "Tambah variasi dan pilihan buah segar di bagian produk segar."
+    },
+    {
+     "reviewId": 21,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Sederhanakan prosedur retur bagi pelanggan yang membawa struk pembelian."
+    },
+    {
+     "reviewId": 22,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Lakukan pemeliharaan rutin pada mesin self-checkout agar selalu berfungsi baik."
+    },
+    {
+     "reviewId": 23,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Tambah jumlah ruang ganti pakaian untuk mengurangi waktu antre."
+    },
+    {
+     "reviewId": 24,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Pertahankan konsistensi pegawai dalam menjelaskan garansi produk dengan jelas."
+    },
+    {
+     "reviewId": 25,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Delivery",
+     "actionableInsight": "Pertahankan ketepatan waktu pengiriman pesanan sesuai estimasi."
+    },
+    {
+     "reviewId": 26,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Store Experience",
+     "actionableInsight": "Pertahankan kebersihan dan keharuman toilet secara berkala agar kenyamanan pengunjung tetap terjaga."
+    },
+    {
+     "reviewId": 27,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Price/Value",
+     "actionableInsight": "Pertahankan konsistensi kualitas produk yang sebanding dengan harga yang ditawarkan kepada pelanggan."
+    },
+    {
+     "reviewId": 28,
+     "language": "id",
+     "aiSentiment": "NEGATIVE",
+     "category": "Customer Service",
+     "actionableInsight": "Berikan pelatihan pelayanan pelanggan kepada staf agar lebih ramah saat menjelaskan promo."
+    },
+    {
+     "reviewId": 29,
+     "language": "id",
+     "aiSentiment": "POSITIVE",
+     "category": "Website/App",
+     "actionableInsight": "Pertahankan dan terus kembangkan fitur pencarian produk untuk memudahkan pengalaman belanja."
+    },
+    {
+     "reviewId": 30,
+     "language": "id",
+     "aiSentiment": "NEUTRAL",
+     "category": "Store Experience",
+     "actionableInsight": "Tingkatkan variasi produk dan layanan agar dapat memberikan pengalaman berbelanja yang lebih berkesan."
+    }
+   ],
+   "summary": {
+    "overview": "Ulasan pelanggan menunjukkan berbagai pengalaman mulai dari yang sangat positif hingga negatif di berbagai departemen. Beberapa area seperti Customer Service, Online Shopping, dan Grocery menghadapi keluhan terkait kualitas produk, keterlambatan pengiriman, serta pelayanan petugas, sementara departemen lain seperti Checkout dan Returns mendapat apresiasi positif.",
+    "departments": [
+     {
+      "department": "Customer Service",
+      "summary": "Pelanggan mengalami inkonsistensi layanan, mulai dari staf yang sangat membantu dan solutif hingga antrean yang terlalu lama dan sikap petugas yang kurang ramah.",
+      "topIssues": [
+       "Waktu tunggu yang lama tanpa bantuan",
+       "Petugas bersikap jutek saat ditanya"
+      ],
+      "priorityActions": [
+       "Menambah jumlah staf di meja layanan untuk mengurangi waktu tunggu",
+       "Memberikan pelatihan pelayanan pelanggan terkait keramahan staf"
+      ]
+     },
+     {
+      "department": "Online Shopping",
+      "summary": "Pengalaman pelanggan terbagi antara pengiriman yang cepat sesuai estimasi dan kendala serius terkait keterlambatan pengiriman serta kondisi paket.",
+      "topIssues": [
+       "Paket datang terlambat",
+       "Kardus paket dalam kondisi penyok"
+      ],
+      "priorityActions": [
+       "Mengevaluasi kinerja layanan kurir dan pengiriman",
+       "Memperbaiki standar pengemasan agar paket tidak rusak"
+      ]
+     },
+     {
+      "department": "Website/App",
+      "summary": "Aplikasi dinilai memiliki fitur pencarian yang sangat membantu, namun masih memiliki kendala teknis yang mengganggu proses transaksi.",
+      "topIssues": [
+       "Aplikasi sering keluar sendiri (logout) saat pembayaran"
+      ],
+      "priorityActions": [
+       "Melakukan perbaikan bug pada sistem aplikasi, khususnya pada sesi pembayaran"
+      ]
+     },
+     {
+      "department": "Returns",
+      "summary": "Layanan retur menerima masukan yang kontras antara proses yang cepat dan tanpa kesulitan hingga penolakan retur yang dianggap menyulitkan pelanggan.",
+      "topIssues": [
+       "Retur ditolak meskipun ada struk",
+       "Proses retur dianggap ribet"
+      ],
+      "priorityActions": [
+       "Meninjau kembali kebijakan retur agar lebih transparan dan konsisten"
+      ]
+     },
+     {
+      "department": "Store Environment",
+      "summary": "Lingkungan toko dinilai cukup bersih dengan fasilitas toilet yang baik, namun terdapat keluhan mengenai musik yang terlalu keras dan area parkir yang sulit di akhir pekan.",
+      "topIssues": [
+       "Parkiran susah dicari saat akhir pekan",
+       "Volume musik terlalu kencang"
+      ],
+      "priorityActions": [
+       "Mengatur volume musik agar lebih nyaman bagi pengunjung",
+       "Mengoptimalkan pengaturan area parkir saat akhir pekan"
+      ]
+     },
+     {
+      "department": "Grocery",
+      "summary": "Pelanggan menikmati kesegaran sayur dan harga promo, tetapi kecewa karena menemukan produk kedaluwarsa, pilihan buah yang sedikit, serta stok yang terbatas.",
+      "topIssues": [
+       "Produk susu kedaluwarsa",
+       "Pilihan buah sedikit",
+       "Stok produk terbatas"
+      ],
+      "priorityActions": [
+       "Meningkatkan pengecekan tanggal kedaluwarsa produk secara rutin",
+       "Menambah variasi dan ketersediaan stok buah serta produk lainnya"
+      ]
+     },
+     {
+      "department": "Home Goods",
+      "summary": "Departemen ini menyediakan pilihan alat dapur yang lengkap dan kualitas yang sesuai harga, namun terkendala oleh ketersediaan stok barang.",
+      "topIssues": [
+       "Stok barang yang dicari sering habis"
+      ],
+      "priorityActions": [
+       "Meningkatkan manajemen inventaris untuk mencegah kehabisan stok"
+      ]
+     },
+     {
+      "department": "Clothing",
+      "summary": "Kualitas bahan dan ukuran pakaian disukai pelanggan, tetapi fasilitas ruang ganti yang terbatas menyebabkan antrean yang panjang.",
+      "topIssues": [
+       "Jumlah ruang ganti terlalu sedikit sehingga harus antre lama"
+      ],
+      "priorityActions": [
+       "Menambah fasilitas ruang ganti untuk mengurangi waktu tunggu pelanggan"
+      ]
+     },
+     {
+      "department": "Electronics",
+      "summary": "Sebagian besar pelanggan puas dengan kejelasan penjelasan garansi dan perbedaan produk oleh pegawai, namun ada ketidaksesuaian harga antara toko dan website.",
+      "topIssues": [
+       "Harga TV di toko lebih mahal daripada di website"
+      ],
+      "priorityActions": [
+       "Menyelaraskan informasi harga antara toko fisik dan platform online"
+      ]
+     },
+     {
+      "department": "Checkout",
+      "summary": "Pelanggan merasakan pengalaman yang sangat baik dengan kasir yang ramah, antrean cepat, serta mesin self-checkout yang praktis dan berfungsi dengan baik.",
+      "topIssues": [],
+      "priorityActions": [
+       "Mempertahankan standar layanan kasir dan fungsi mesin self-checkout"
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

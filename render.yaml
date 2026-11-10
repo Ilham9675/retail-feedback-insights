@@ -1,0 +1,19 @@
+# Render Blueprint for the public, read-only demo (free plan).
+# Render builds the Dockerfile; the samples come with stored Gemini results, so no API key is needed.
+# The in-container H2 database is rebuilt from the samples on every start (free instances have no persistent disk).
+services:
+  - type: web
+    name: retail-feedback-insights
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: DEMO_MODE
+        value: "true"
+      - key: DATABASE_URL
+        value: jdbc:h2:mem:demo
+      # 512 MB instance: keep the heap small enough for metaspace and threads
+      - key: JAVA_OPTS
+        value: -XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k

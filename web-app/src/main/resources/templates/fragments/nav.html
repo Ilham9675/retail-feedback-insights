@@ -18,9 +18,16 @@
                th:href="${currentBatch != null} ? @{/evaluation(batch=${currentBatch.id})} : @{/evaluation}">Model Evaluation</a>
             <a class="btn btn-sm" th:classappend="${page == 'summary'} ? 'btn-light' : 'btn-outline-light'"
                th:href="${currentBatch != null} ? @{/summary(batch=${currentBatch.id})} : @{/summary}">Executive Summary</a>
-            <a class="btn btn-sm" th:classappend="${page == 'upload'} ? 'btn-light' : 'btn-warning'" href="/upload">Upload reviews</a>
+            <a th:unless="${demoMode}" class="btn btn-sm" th:classappend="${page == 'upload'} ? 'btn-light' : 'btn-warning'" href="/upload">Upload reviews</a>
         </div>
     </div>
 </nav>
+<div th:fragment="demoBanner" th:if="${demoMode}" class="container">
+    <div class="alert alert-info py-2 small">
+        <b>Live demo, read-only.</b> The samples were analysed by Google Gemini beforehand and the results are stored,
+        so browsing costs no API calls. Uploads and new AI requests are switched off here;
+        <a href="https://github.com/Ilham9675/retail-feedback-insights" class="alert-link">run it locally</a> to analyse your own reviews.
+    </div>
+</div>
 </body>
 </html>

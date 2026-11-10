@@ -67,6 +67,10 @@ flowchart LR
 
 ## Getting started
 
+### Deploy the read-only demo
+
+[render.yaml](render.yaml) deploys the Docker image to [Render](https://render.com)'s free plan as a read-only demo (`DEMO_MODE=true`, in-memory H2, no API key): visitors browse the stored sample results, and uploads and other actions that would call Gemini return a "read-only demo" page. In Render choose *New → Blueprint*, connect this repository and deploy. The app uses about 300 MB, within the free plan's 512 MB; free instances sleep after 15 minutes without traffic, so the first visit can take a minute.
+
 ### With Docker (app + PostgreSQL)
 
 Requirements: Docker. The image builds the app itself, so no JDK or Maven is needed.
@@ -94,7 +98,7 @@ export GEMINI_API_KEY=your-key            # PowerShell: $env:GEMINI_API_KEY="you
 java -jar web-app/target/web-app-0.1.0-SNAPSHOT.jar
 ```
 
-Open <http://localhost:8080> for the dashboard, <http://localhost:8080/evaluation> for the model comparison and <http://localhost:8080/upload> to analyse your own reviews (sample CSVs: [English](web-app/src/main/resources/static/samples/sample_reviews.csv), [Indonesian](web-app/src/main/resources/static/samples/sample_reviews_id.csv)). Gemini starts analysing a batch right after the upload (or the first time a sample is opened) in a background worker; the page shows a live progress bar and opens the results when it is done. Results are stored in `data/db/`, so later visits and restarts don't call the API again.
+Open <http://localhost:8080> for the dashboard, <http://localhost:8080/evaluation> for the model comparison and <http://localhost:8080/upload> to analyse your own reviews (sample CSVs: [English](web-app/src/main/resources/static/samples/sample_reviews.csv), [Indonesian](web-app/src/main/resources/static/samples/sample_reviews_id.csv)). The two samples come with the stored results of a real Gemini run ([precomputed-results.json](web-app/src/main/resources/demo/precomputed-results.json)), so they are analysed even without a key; set `FEEDBACK_SAMPLE_PRECOMPUTED=false` to have Gemini analyse them yourself. Gemini starts analysing an upload right away in a background worker; the page shows a live progress bar and opens the results when it is done. Results are stored in `data/db/`, so later visits and restarts don't call the API again.
 
 ### Upload format
 
@@ -119,6 +123,8 @@ The first build downloads the CoreNLP models (~470 MB).
 | `FEEDBACK_INPUT_FILE` | `data/sentiment_feedback_output.txt` | CoreNLP output to read |
 | `FEEDBACK_LABELS_FILE` | `data/store_feedback.txt` | Labels for the sample dataset |
 | `FEEDBACK_UPLOAD_MAX_REVIEWS` | `200` | Maximum reviews per upload |
+| `FEEDBACK_SAMPLE_PRECOMPUTED` | `true` | Load the samples with stored Gemini results instead of calling the API |
+| `DEMO_MODE` | `false` | Read-only demo: no uploads, retries or new summaries, so nothing can call Gemini |
 | `DATABASE_URL` | `jdbc:h2:file:./data/db/feedback` | JDBC URL of the database (H2 or PostgreSQL) |
 | `DATABASE_USERNAME`, `DATABASE_PASSWORD` | `sa`, empty | Database credentials |
 | `PORT` | `8080` | HTTP port |
@@ -175,14 +181,16 @@ Example review from `/getfeedback`:
 - **Evaluation against ground truth.** The raw dataset carries a label per review (`Feedback #12 [NEGATIVE]`). `EvaluationService` collapses CoreNLP's five classes to three and reports accuracy and a confusion matrix per model.
 - **Configurable model.** The course code targeted `gemini-1.5-flash`, which Google retired, and `gemini-2.5-flash` was unavailable to new keys, so the model is a property.
 - **Container and CI.** A multi-stage Dockerfile builds only the web module (CoreNLP's 470 MB of models are not needed at runtime) and runs it on a JRE as a non-root user; Docker Compose adds PostgreSQL with a health check. GitHub Actions runs the tests on every push and then starts the Compose stack without a Gemini key and checks the health endpoint, the imported sample and the OpenAPI spec. The same entities run on H2 and PostgreSQL (the stored summary is a long `varchar`, not a `@Lob`, which PostgreSQL would turn into a large object).
+- **A demo that can't spend quota.** A public demo with an API key behind it is an open invitation to burn the key's quota. Instead, the Gemini results of a real run are exported to JSON and applied when the samples are imported, and `DEMO_MODE` blocks every endpoint that would call Gemini with an interceptor. The demo runs without a key at all, and a test checks that it reproduces the README's numbers (46/50 and 27/30) with zero Gemini calls.
 - **Secrets.** The API key comes only from the environment; tests start the Spring context with a dummy key and a mocked analyzer, so CI never needs a real key.
 - **Consistent output.** Numbers are formatted with `Locale.US` and files are read/written as UTF-8, so results are the same on any machine locale.
 
 ## Tests
 
-`mvn test` runs 35 tests without network access (Gemini is mocked, the database is in-memory):
+`mvn test` runs 38 tests without network access (Gemini is mocked, the database is in-memory):
 
 - `FeedbackFlowIntegrationTest`: both samples are imported once on startup (English is the default); the Indonesian batch keeps the detected language and is scored with Gemini only; a batch is analysed in 2 calls and later reads use the database; failed requests are counted and can be retried; evaluation scores both models; a CSV upload becomes a new batch and is analysed in the background; an unanalysed batch shows the progress page and the status endpoint reports completion; retries run in the background; a stale "analyzing" flag is cleared on startup; dashboard and API filters return the right subset; the executive summary is generated only on request, once, and served from the database afterwards, and a failed request shows an error and stores nothing; invalid uploads store nothing; unknown batches return 404; the OpenAPI spec covers only the JSON API and the health endpoint is up.
+- `DemoModeIntegrationTest`: with stored results and demo mode on, both samples arrive analysed with summaries and the README's accuracy, pages show the demo banner without upload or regenerate buttons, every action that would call Gemini returns 403, and Gemini is never called.
 - `FeedbackFileParserTest`: CSV variants, the raw text dataset, the CoreNLP output format and invalid files.
 - `EvaluationServiceTest`: five-to-three class mapping, accuracy and confusion matrix.
 - `FeedbackSummaryTest`: filter matching (department, displayed sentiment, category, inclusive date range, blank values) and the weekly trend (Monday grouping, empty weeks, undated reviews).
@@ -199,7 +207,8 @@ Example review from `/getfeedback`:
 - [x] **Phase 2D:** dashboard filters (department, sentiment, category, date range) and a weekly sentiment trend
 - [x] **Phase 2E:** per-department executive summary (main issues + priority actions), one Gemini request per batch
 - [x] **Phase 3A:** OpenAPI docs with Swagger UI, health endpoint, Docker Compose with PostgreSQL, GitHub Actions (tests + Compose smoke test)
-- [ ] **Phase 3B:** live demo, Spring AI evaluators for insight quality
+- [x] **Phase 3B:** read-only demo mode with stored Gemini results (no API key needed) and a Render blueprint
+- [ ] **Phase 3C:** Spring AI evaluators for insight quality
 - [ ] **Phase 4:** "ask your feedback" chat (RAG), alerts on negative spikes
 
 ## Origin and attribution
